@@ -17,14 +17,14 @@ from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path
-from games.views import leagues, teams
+# from games.views import leagues, teams
 
 urlpatterns = [
-    path('leagues/', leagues),
-    path('teams/', teams),
-    path('games/', include('games.urls')),
+    path('', include('games.urls')),
+    # path('leagues/', leagues),
+    # path('teams/', teams),
     path("admin/", admin.site.urls),
 ]
 
-urlpatterns += static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
-urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+# urlpatterns += static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
+# urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
