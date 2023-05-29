@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Games{% endblock %}
+
+{% block content %}
+    <h2>Games</h2>
+    <p>Here are the games:</p>
+    <ul class="p-20">
+    {% for game in games_this_week %}
+        <li>
+            <p>Game: <strong>{{ game.name }}</strong></p>
+            <p>Time: {{game.time}}</p>
+            <p> Network: {{game.network }}</p>
+            <hr>
+        </li>
+    {% endfor %}
+    </ul>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% for league in leagues %}
+    {{ league.name }}
+    <ul>
+        {% for game in league.games %}
+            <li>
+                <p>{{game.time}} {{ game.name }}</p>
+                {% if game.network %}
+                    <p>{{ game.network }}</p>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% endfor %}

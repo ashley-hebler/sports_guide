@@ -1,0 +1,6 @@
+__pycache__
+.mypy_cache/
+.env
+env
+notes.txt
+.DS_Store
