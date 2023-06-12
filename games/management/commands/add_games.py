@@ -56,15 +56,15 @@ class Command(BaseCommand):
                     if date:
                         date = datetime.datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')
                         game_date = date.astimezone(timezone.utc)
-                        game, created_game = Game.objects.get_or_create(name=f"{home_team_name} vs {opponent_name}", league=league, sport=sport, network=network, time=game_date)
+                        game, created_game = Game.objects.get_or_create(name=f"{home_team_name} vs {opponent_name}", league=league, sport=sport, time=game_date)
 
                         if created_game:
                             game.teams.add(home_team)
                             game.teams.add(opponent)
+                            game.networks.add(network)
                             game.save()
                             counter += 1
         return counter         
-
 
     def wnba():
         counter = 0
@@ -101,10 +101,22 @@ class Command(BaseCommand):
                 team_home, created_home = Team.objects.get_or_create(name=team_home, league=league)
                 team_visitor, created_visitor = Team.objects.get_or_create(name=team_visitor, league=league)
 
+                # create network
+                broadcast = game['bd']
+                networks = []
+                if broadcast:
+                    network_list = broadcast['b']
+                    if network_list:
+                        for network in network_list:
+                            network_name = network['disp']
+                            network, created = Network.objects.get_or_create(name=network_name)
+                            networks.append(network)
                 # create a game
                 game, created_game = Game.objects.get_or_create(name=f"{team_home} vs {team_visitor}", time=game_date, league=league, sport=sport)
                 counter += 1
                 if created_game:
+                    for network in networks:
+                        game.networks.add(network)
                     game.teams.add(team_home)
                     game.teams.add(team_visitor)
                     game.save()
@@ -209,9 +221,10 @@ class Command(BaseCommand):
                 game_name = ' vs '.join(teams)
                 if CREATE_DATA:
                     network, network_created = Network.objects.get_or_create(name='ESPN+')
-                    game, created_game = Game.objects.get_or_create(name=game_name, time=date, league=league, sport=sport, network=network)
+                    game, created_game = Game.objects.get_or_create(name=game_name, time=date, league=league, sport=sport)
                     counter += 1
                     if created_game:
+                        game.networks.add(network)
                         for team in teams:
                             team, created_team = Team.objects.get_or_create(name=team, league=league)
                             game.teams.add(team)
@@ -220,6 +233,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('fresh_data', type=bool, help='Delete all games, teams, leagues, networks, and sports before adding new data', default=False)
+        parser.add_argument('--league', type=str, help='Add only league passed', default='')
 
     def handle(self, *args, **options):
         # get args
@@ -231,27 +245,33 @@ class Command(BaseCommand):
             League.objects.all().delete()
             Sport.objects.all().delete()
             Network.objects.all().delete()
-        try:
-            nwsl = Command.nwsl()
-            self.stdout.write(self.style.SUCCESS(f'Successfully added {nwsl} NWSL games'))
-        except Exception as e:
-            raise CommandError(f'Error adding games: {e}')
-    
-        try:
-            wnba_count = Command.wnba()
-            self.stdout.write(self.style.SUCCESS(f'Successfully added {wnba_count} WNBA games'))
-        except Exception as e:
-            raise CommandError(f'Error adding games: {e}')
 
-        # try:
-        #     phl_count = Command.phl()
-        #     self.stdout.write(self.style.SUCCESS(f'Successfully added {phl_count} PHL games'))
-        # except Exception as e:
-        #     raise CommandError(f'Error adding games: {e}')
+        leagues = {
+            'ncaa': ('NCAA', 'Successfully added {} NCAA games'),
+            'wnba': ('WNBA', 'Successfully added {} WNBA games'),
+            'phl': ('PHL', 'Successfully added {} PHL games'),
+            'nwsl': ('NWSL', 'Successfully added {} NWSL games'),
+        }
 
-        # try:
-        #     ncaa_count = Command.ncaa()
-        #     self.stdout.write(self.style.SUCCESS(f'Successfully added {ncaa_count} NCAA games'))
-        # except Exception as e:
-        #     raise CommandError(f'Error adding games: {e}')
+        league_name = options['league']
+        if league_name:
+            if league_name in leagues:
+                league_data = leagues[league_name]
+                try:
+                    count = getattr(Command, league_data[0].lower())()
+                    self.stdout.write(self.style.SUCCESS(league_data[1].format(count)))
+                except Exception as e:
+                    raise CommandError(f'Error adding games: {e}')
+            else:
+                raise CommandError(f'League {league_name} does not exist')
+        else:
+            # run all leagues
+            for league_data in leagues.values():
+                try:
+                    count = getattr(Command, league_data[0].lower())()
+                    self.stdout.write(self.style.SUCCESS(league_data[1].format(count)))
+                except Exception as e:
+                    raise CommandError(f'Error adding games: {e}')
+
+
 

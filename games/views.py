@@ -1,4 +1,4 @@
-import datetime
+from datetime import date, datetime, timedelta
 from django.http import HttpResponse
 from django.template import loader
 
@@ -6,12 +6,13 @@ from .models import Game, League, Team
 
 def index(request):
     # games today
-    # games_today = Game.objects.filter(time__date=datetime.date.today()).order_by('time')
-    # games_this_week = Game.objects.filter(time__date__range=[datetime.date.today(), datetime.date.today() + datetime.timedelta(days=7)]).order_by('time')
+    games_today = Game.objects.filter(time__date=date.today()).order_by('time')
+    games_this_week = Game.objects.filter(time__date__range=[date.today(), date.today() + timedelta(days=7)]).order_by('time')
     template = loader.get_template('games/index.html')
+    # surface networks
     context = {
-        'games_today': [],
-        'games_this_week': [],
+        'games_today': games_today,
+        'games_this_week': games_this_week,
     }
     return HttpResponse(template.render(context, request))
 

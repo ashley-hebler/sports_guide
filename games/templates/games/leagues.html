@@ -5,9 +5,9 @@
         {% for game in league.games %}
             <li>
                 <p>{{game.time}} {{ game.name }}</p>
-                {% if game.network %}
-                    <p>{{ game.network }}</p>
-                {% endif %}
+                {% for team in game.teams %}
+                    <p>{{ team.name }}</p>
+                {% endfor %}
             </li>
         {% endfor %}
     </ul>

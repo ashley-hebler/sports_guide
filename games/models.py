@@ -10,7 +10,8 @@ class Game(models.Model):
     league = models.ForeignKey('League', on_delete=models.CASCADE, null=True)
     sport = models.ForeignKey('Sport', on_delete=models.CASCADE, null=True)
     teams = models.ManyToManyField('Team')
-    network = models.ForeignKey('Network', on_delete=models.CASCADE, null=True)
+    networks = models.ManyToManyField('Network')
+
 
     def __str__(self):
         return self.name

@@ -3,16 +3,39 @@
 {% block title %}Games{% endblock %}
 
 {% block content %}
-    <h2>Games</h2>
-    <p>Here are the games:</p>
-    <ul class="p-20">
-    {% for game in games_this_week %}
-        <li>
-            <p>Game: <strong>{{ game.name }}</strong></p>
-            <p>Time: {{game.time}}</p>
-            <p> Network: {{game.network }}</p>
-            <hr>
-        </li>
-    {% endfor %}
-    </ul>
+    <h1 class="text-3xl mb-8">Games</h1>
+    {% if games_today %}
+        <h2 class="text-xl bg-indigo-500 p-2 text-white inline-block mb-6 rounded-lg">Today</h2>
+        <ul>
+        {% for game in games_today %}
+            <li class="mb-4 pb-4 border-b-4 border-indigo-500">
+                <p><strong>{% if game.sport == 'basketball'%}🏀{%else%}⚽️{%endif%} {{ game.name }}</strong></p>
+                <p><em>{{game.time}}</em></p>
+                {% if game.networks %}
+                    <p>📺 {{ game.networks.all|join:", " }}</p>
+                {% endif %}
+                
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+    <h2 class="text-xl bg-indigo-500 p-2 text-white inline-block mb-6 rounded-lg">No games today</h2>
+    {% endif %}
+    {% if games_this_week %}
+        <h2 class="text-xl bg-cyan-500 p-2 text-white inline-block mb-6 rounded-lg">This week</h2>
+        <ul>
+        {% for game in games_this_week %}
+            <li class="mb-4 pb-4 border-b-4 border-cyan-500">
+                <p><strong>{% if game.sport == 'basketball'%}🏀{%else%}⚽️{%endif%} {{ game.name }}</strong></p>
+                <p><em>{{game.time}}</em></p>
+                {% if game.networks %}
+                    <p>📺 {{ game.networks.all|join:", " }}</p>
+                {% endif %}
+                
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+    <h2 class="text-xl bg-cyan-500 p-2 text-white inline-block mb-6 rounded-lg">No games today</h2>
+    {% endif %}
 {% endblock %}

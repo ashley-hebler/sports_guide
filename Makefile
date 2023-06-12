@@ -3,7 +3,6 @@ start:
 
 clean:
 	echo "yes" | python manage.py flush
-	python manage.py createsuperuser
 
 user:
 	python manage.py createsuperuser
@@ -13,3 +12,9 @@ data:
 
 debug:
 	python manage.py add_games fresh_data=False
+
+wnba:
+	python manage.py add_games fresh_data=True --league wnba
+
+nwsl:
+	python manage.py add_games fresh_data=False --league nwsl
