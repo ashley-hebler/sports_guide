@@ -24,6 +24,7 @@ urlpatterns = [
     path('leagues/', leagues),
     path('teams/', teams),
     path("admin/", admin.site.urls),
+    path('api/', include('api.urls')), # new
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
