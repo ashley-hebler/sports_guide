@@ -2,12 +2,14 @@ import requests
 import re
 import datetime
 import time
+import json
 
 from bs4 import BeautifulSoup
 
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from games.models import Game, Team, League, Sport, Network
+from .utils import str2bool
 
 
 
@@ -18,6 +20,12 @@ NCAA_ENDPOINT = 'https://www.espn.com/womens-college-basketball/schedule/_/date/
 PHL_ENDPOINT = 'https://www.oursportscentral.com/services/schedule/premier-hockey-federation/l-231'
 
 NWSL_ENDPOINT = 'https://d2nkt8hgeld8zj.cloudfront.net/services/nwsl.ashx/schedule?season'
+
+FIFA_ENDPOINT = 'https://api.fifa.com/api/v3/calendar/matches?language=en&count=500&idSeason=285026'
+
+FIFA_NETWORK_LOOKUP = 'https://api.fifa.com/api/v3/watch/season/285026?language=en'
+
+FIFA_NAME_PREFIX = 'World Cup 2023 -'
 
 CREATE_DATA = True
 
@@ -231,13 +239,96 @@ class Command(BaseCommand):
                             game.save()
         return counter        
 
+    def fifa_network_lookup():
+        """
+        Create a map where the key is the match id and
+        the value is a list of networks
+        """
+        USA_ID = 109
+        response = requests.get(FIFA_NETWORK_LOOKUP)
+        json = response.json()
+        # json = Command.fifa_sample_fifa_watch()
+        data = json.get('Results')
+        match_map = {}
+        if data and data[USA_ID] and data[USA_ID].get('IdCountry') == 'USA':
+            # get list of matches
+            matches = data[USA_ID].get('Matches')
+            for match in matches:
+                match_id = match.get('IdMatch')
+                networks = match.get('Sources')
+                clean_networks = []
+                if networks:
+                    for network in networks:
+                        network_name = network.get('Name')
+                        if network_name:
+                            # create network
+                            network, created = Network.objects.get_or_create(name=network_name)
+                            clean_networks.append(network)
+                match_map[match_id] = clean_networks
+        return match_map
+
+            
+    def fifa_sample_data():
+        # get sample data from file
+        with open('./games/data/sample-fifa.json') as json_file:
+            # return data from json file
+            return json.load(json_file)
+
+    def fifa_sample_fifa_watch():
+        # get sample data from file
+        with open('./games/data/sample-fifa-watch.json') as json_file:
+            # return data from json file
+            return json.load(json_file)
+    
+    
+    def fifa():
+        counter = 0
+        response = requests.get(FIFA_ENDPOINT)
+        json = response.json()
+        # json = Command.fifa_sample_data()
+        matches = json.get('Results')
+        match_map = Command.fifa_network_lookup()
+        # create sport
+        sport, created = Sport.objects.get_or_create(name='soccer')
+        # create league
+        league, created = League.objects.get_or_create(name='FIFA', sport=sport)
+        for match in matches:
+            home_team = match.get('Home')
+            away_team = match.get('Away')
+            if home_team and away_team:
+                home_team = home_team.get('ShortClubName')
+                away_team = away_team.get('ShortClubName')
+                # create team
+                home_team, created = Team.objects.get_or_create(name=home_team, league=league)
+                away_team, created = Team.objects.get_or_create(name=away_team, league=league)
+                match_id = match.get('IdMatch')
+                networks = match_map.get(match_id)
+                date = match.get('Date')      
+                if date:
+                    # format is 2023-07-31T10:00:00Z
+                    date = datetime.datetime.strptime(date, '%Y-%m-%dT%H:%M:%SZ')
+                    game_date = date.astimezone(timezone.utc)
+                    name = f"{FIFA_NAME_PREFIX} {home_team} vs {away_team}"
+                    game, created_game = Game.objects.get_or_create(name=name, league=league, sport=sport, time=game_date)
+
+                    if created_game:
+                        game.teams.add(home_team)
+                        game.teams.add(away_team)
+                        for network in networks:
+                            game.networks.add(network)
+                        game.save()
+                        counter += 1
+        return counter
+    
     def add_arguments(self, parser):
-        parser.add_argument('fresh_data', type=bool, help='Delete all games, teams, leagues, networks, and sports before adding new data', default=False)
+        parser.add_argument('--fresh_data', type=str, help='Delete all games, teams, leagues, networks, and sports before adding new data', default='False')
         parser.add_argument('--league', type=str, help='Add only league passed', default='')
 
     def handle(self, *args, **options):
         # get args
         FRESH_DATA = options['fresh_data']
+        if FRESH_DATA:
+            FRESH_DATA = str2bool(FRESH_DATA)
         # if fresh data is needed, delete all games, teams, leagues, networks, and sports
         if FRESH_DATA:
             Game.objects.all().delete()
@@ -247,10 +338,11 @@ class Command(BaseCommand):
             Network.objects.all().delete()
 
         leagues = {
-            'ncaa': ('NCAA', 'Successfully added {} NCAA games'),
+            # 'ncaa': ('NCAA', 'Successfully added {} NCAA games'),
             'wnba': ('WNBA', 'Successfully added {} WNBA games'),
-            'phl': ('PHL', 'Successfully added {} PHL games'),
+            # 'phl': ('PHL', 'Successfully added {} PHL games'),
             'nwsl': ('NWSL', 'Successfully added {} NWSL games'),
+            'fifa': ('FIFA', 'Successfully added {} FIFA games')
         }
 
         league_name = options['league']
