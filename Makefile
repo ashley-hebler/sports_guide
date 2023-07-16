@@ -30,3 +30,6 @@ clean_wnba:
 
 clean_nwsl:
 	python manage.py clean_games --all_games True --league NWSL
+
+make dep:
+	python -m pip freeze > requirements.txt

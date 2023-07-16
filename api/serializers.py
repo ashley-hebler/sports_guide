@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 from rest_framework import serializers
-from games.models import Game
+from games.models import Game, Sport
 
 
 class GameSerializer(serializers.ModelSerializer):
@@ -19,4 +19,11 @@ class GameSerializer(serializers.ModelSerializer):
     def get_date_formatted(self, obj):
         # date no leading zeros
         return obj.time.strftime("%B %-d, %Y")
+
+
+class SportsSerializer(serializers.Serializer):
+    class Meta:
+        model = Sport
+        fields = ['na']
+    
         
