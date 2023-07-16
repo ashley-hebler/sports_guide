@@ -5,6 +5,7 @@
 * [x] Separate frontend
 * [ ] Investigate DB perf.
 * [ ] Rename this to sheplays-api or something like that
+* [ ] Clean up URLS
 * [ ] Get rid of all template files here
 
 
