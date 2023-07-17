@@ -21,6 +21,7 @@ PHL_ENDPOINT = 'https://www.oursportscentral.com/services/schedule/premier-hocke
 
 NWSL_ENDPOINT = 'https://d2nkt8hgeld8zj.cloudfront.net/services/nwsl.ashx/schedule?season'
 
+# from https://www.fifa.com/fifaplus/en/tournaments/womens/womensworldcup/australia-new-zealand2023/tv-programme?
 FIFA_ENDPOINT = 'https://api.fifa.com/api/v3/calendar/matches?language=en&count=500&idSeason=285026'
 
 FIFA_NETWORK_LOOKUP = 'https://api.fifa.com/api/v3/watch/season/285026?language=en'

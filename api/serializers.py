@@ -14,11 +14,13 @@ class GameSerializer(serializers.ModelSerializer):
     
     def get_time_formatted(self, obj):
         #hour:minute am/pm
-        return obj.time.strftime("%I:%M %p")
+        local_time = obj.time.astimezone()    
+        return local_time.astimezone().strftime("%I:%M %p %Z")
     
     def get_date_formatted(self, obj):
         # date no leading zeros
-        return obj.time.strftime("%B %-d, %Y")
+        local_time = obj.time.astimezone()
+        return local_time.astimezone().strftime("%B %-d, %Y")
 
 
 class SportsSerializer(serializers.Serializer):
