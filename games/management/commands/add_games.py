@@ -246,9 +246,9 @@ class Command(BaseCommand):
         the value is a list of networks
         """
         USA_ID = 109
-        # response = requests.get(FIFA_NETWORK_LOOKUP)
-        # json = response.json()
-        json = Command.fifa_sample_fifa_watch()
+        response = requests.get(FIFA_NETWORK_LOOKUP)
+        json = response.json()
+        # json = Command.fifa_sample_fifa_watch()
         data = json.get('Results')
         match_map = {}
         if data and data[USA_ID] and data[USA_ID].get('IdCountry') == 'USA':
@@ -284,9 +284,9 @@ class Command(BaseCommand):
     
     def fifa():
         counter = 0
-        # response = requests.get(FIFA_ENDPOINT)
-        # json = response.json()
-        json = Command.fifa_sample_data()
+        response = requests.get(FIFA_ENDPOINT)
+        json = response.json()
+        # json = Command.fifa_sample_data()
         matches = json.get('Results')
         match_map = Command.fifa_network_lookup()
         # create sport
