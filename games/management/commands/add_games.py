@@ -245,7 +245,7 @@ class Command(BaseCommand):
         Create a map where the key is the match id and
         the value is a list of networks
         """
-        USA_ID = 109
+        USA_ID = 143
         response = requests.get(FIFA_NETWORK_LOOKUP)
         json = response.json()
         # json = Command.fifa_sample_fifa_watch()
