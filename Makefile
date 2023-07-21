@@ -16,6 +16,9 @@ nwsl:
 fifa:
 	python manage.py add_games --fresh_data False --league fifa
 
+au:
+	python manage.py add_games --fresh_data False --league au
+
 clean:
 	python manage.py clean_games --all_games False 
 
@@ -31,5 +34,11 @@ clean_wnba:
 clean_nwsl:
 	python manage.py clean_games --all_games True --league NWSL
 
-make dep:
+clean_au:
+	python manage.py clean_games --all_games True --league "Athletes Unlimited"
+
+dep:
 	python -m pip freeze > requirements.txt
+
+scrape_au:
+	scrapy runspider ./games/management/commands/au_scrape.py -o ./games/data/au_softball.json

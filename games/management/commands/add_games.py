@@ -281,7 +281,7 @@ class Command(BaseCommand):
             # return data from json file
             return json.load(json_file)
     
-    
+
     def fifa():
         counter = 0
         response = requests.get(FIFA_ENDPOINT)
@@ -320,6 +320,53 @@ class Command(BaseCommand):
                         counter += 1
         return counter
     
+    def au():
+        counter = 0
+        # load data from file
+        with open('./games/data/au_softball.json') as json_file:
+            # return data from json file
+            data = json.load(json_file)
+            # create sport
+            sport, created = Sport.objects.get_or_create(name='softball')
+            # create league
+            league, created = League.objects.get_or_create(name='Athletes Unlimited', sport=sport)
+            
+            for game in data:
+                # get name and find teams based on team1 vs. team2
+                name = game['name']
+                teams = name.split(' vs. ')
+                team1 = teams[0]
+                team2 = teams[1]
+                
+                # get date and time based on epoch
+                date = game['date']
+                # convert to date from string to int
+                date = int(date)
+                # convert to datetime
+                date = datetime.datetime.fromtimestamp(date)
+                # convert to utc
+                date = date.astimezone(timezone.utc)
+
+                # network
+                network = game['network']
+                # create network
+                network, created = Network.objects.get_or_create(name=network)
+
+                # create teams
+                team1, created = Team.objects.get_or_create(name=team1, league=league)
+                team2, created = Team.objects.get_or_create(name=team2, league=league)
+                # create game
+                game, created_game = Game.objects.get_or_create(name=name, time=date, league=league, sport=sport)
+                if created_game:
+                    counter += 1
+                    game.teams.add(team1)
+                    game.teams.add(team2)
+                    game.networks.add(network)
+                    game.save()
+        return counter
+
+                
+
     def add_arguments(self, parser):
         parser.add_argument('--fresh_data', type=str, help='Delete all games, teams, leagues, networks, and sports before adding new data', default='False')
         parser.add_argument('--league', type=str, help='Add only league passed', default='')
@@ -342,7 +389,8 @@ class Command(BaseCommand):
             'wnba': ('WNBA', 'Successfully added {} WNBA games'),
             # 'phl': ('PHL', 'Successfully added {} PHL games'),
             'nwsl': ('NWSL', 'Successfully added {} NWSL games'),
-            'fifa': ('FIFA', 'Successfully added {} FIFA games')
+            'fifa': ('FIFA', 'Successfully added {} FIFA games'),
+            'au': ('AU', 'Successfully added {} softball games'),
         }
 
         league_name = options['league']
