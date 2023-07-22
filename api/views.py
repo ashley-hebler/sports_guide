@@ -14,7 +14,7 @@ class GameList(generics.ListCreateAPIView):
         """
         Optionally filter by date range
         """
-        queryset = queryset = Game.objects.all()
+        queryset = queryset = Game.objects.all().order_by('time')
         start_time = self.request.query_params.get('start_time')
         end_time = self.request.query_params.get('end_time')
         if start_time and end_time:
