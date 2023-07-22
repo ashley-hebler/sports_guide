@@ -1,7 +1,9 @@
+import datetime
+
 from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework import generics, viewsets
-from datetime import date, timedelta
+
 from games.models import Game, Sport
 from .serializers import GameSerializer, SportsSerializer
 
@@ -12,23 +14,33 @@ class GameList(generics.ListCreateAPIView):
 
     def get_queryset(self):
         """
-        Optionally filter by date range
+        Parmaeters:
+        ?start_time=YYYY-MM-DD&end_time=YYYY-MM-DD
+        ?start_time=YYYY-MM-DD
+        ?current=true
         """
-        queryset = queryset = Game.objects.all().order_by('time')
+        queryset = Game.objects.all().order_by('time')
         start_time = self.request.query_params.get('start_time')
         end_time = self.request.query_params.get('end_time')
+        current = self.request.query_params.get('current')
         if start_time and end_time:
             queryset = queryset.filter(time__range=[start_time, end_time])
+        if start_time and not end_time:
+            queryset = queryset.filter(time__gte=start_time)
+        if current:
+            # remove games that started more than 3 hours ago
+            current_time = datetime.datetime.now()
+            queryset = queryset.filter(time__gte=current_time - datetime.timedelta(hours=3))
         return queryset
 
 class GamesToday(generics.ListCreateAPIView):
-    queryset = Game.objects.filter(time__date=date.today()).order_by('time')
+    queryset = Game.objects.filter(time__date=datetime.date.today()).order_by('time')
     serializer_class = GameSerializer
 
 class GamesUpcoming(generics.ListCreateAPIView):
     # games this week after today
     # limit to 20 games
-    queryset = Game.objects.filter(time__date__range=[date.today()+ timedelta(days=1), date.today() + timedelta(days=7)]).order_by('time')
+    queryset = Game.objects.filter(time__date__range=[datetime.date.today()+ datetime.timedelta(days=1), datetime.date.today() + datetime.timedelta(days=7)]).order_by('time')
     serializer_class = GameSerializer
 
 class SportsList(generics.ListCreateAPIView):
