@@ -18,11 +18,13 @@ class GameList(generics.ListCreateAPIView):
         ?start_time=YYYY-MM-DD&end_time=YYYY-MM-DD
         ?start_time=YYYY-MM-DD
         ?current=true
+        ?team_includes=team_name
         """
         queryset = Game.objects.all().order_by('time')
         start_time = self.request.query_params.get('start_time')
         end_time = self.request.query_params.get('end_time')
         current = self.request.query_params.get('current')
+        team_includes = self.request.query_params.get('team_includes')
         if start_time and end_time:
             queryset = queryset.filter(time__range=[start_time, end_time])
         if start_time and not end_time:
@@ -31,6 +33,8 @@ class GameList(generics.ListCreateAPIView):
             # remove games that started more than 3 hours ago
             current_time = datetime.datetime.now()
             queryset = queryset.filter(time__gte=current_time - datetime.timedelta(hours=3))
+        if team_includes:
+            queryset = queryset.filter(teams__name__icontains=team_includes)
         return queryset
 
 class GamesToday(generics.ListCreateAPIView):
