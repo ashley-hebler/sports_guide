@@ -18,9 +18,9 @@ class GameSerializer(serializers.ModelSerializer):
         return local_time.astimezone().strftime("%I:%M %p %Z")
     
     def get_date_formatted(self, obj):
-        # date no leading zeros
+        # date no leading zeros and day of week
         local_time = obj.time.astimezone()
-        return local_time.astimezone().strftime("%B %-d, %Y")
+        return local_time.astimezone().strftime("%A, %B %-d, %Y")
 
 
 class SportsSerializer(serializers.Serializer):
