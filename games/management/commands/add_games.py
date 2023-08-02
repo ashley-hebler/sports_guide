@@ -30,6 +30,7 @@ FIFA_NAME_PREFIX = 'World Cup 2023 -'
 
 CREATE_DATA = True
 
+FIFA_TBA = 'TBD'
 
 class Command(BaseCommand):
     help = 'Adds games to the database'
@@ -245,10 +246,10 @@ class Command(BaseCommand):
         Create a map where the key is the match id and
         the value is a list of networks
         """
-        USA_ID = 143
-        response = requests.get(FIFA_NETWORK_LOOKUP)
-        json = response.json()
-        # json = Command.fifa_sample_fifa_watch()
+        USA_ID = 144
+        # response = requests.get(FIFA_NETWORK_LOOKUP)
+        # json = response.json()
+        json = Command.fifa_sample_fifa_watch()
         data = json.get('Results')
         match_map = {}
         if data and data[USA_ID] and data[USA_ID].get('IdCountry') == 'USA':
@@ -261,6 +262,9 @@ class Command(BaseCommand):
                 if networks:
                     for network in networks:
                         network_name = network.get('Name')
+                        language = network.get('Language')
+                        if language != 'English':
+                            network_name = f'{network_name} ({language})'
                         if network_name:
                             # create network
                             network, created = Network.objects.get_or_create(name=network_name)
@@ -281,12 +285,14 @@ class Command(BaseCommand):
             # return data from json file
             return json.load(json_file)
     
-
+    def make_tbd_team(letter):
+        return {FIFA_TBA}-{letter}
+    
     def fifa():
         counter = 0
-        response = requests.get(FIFA_ENDPOINT)
-        json = response.json()
-        # json = Command.fifa_sample_data()
+        # response = requests.get(FIFA_ENDPOINT)
+        # json = response.json()
+        json = Command.fifa_sample_data()
         matches = json.get('Results')
         match_map = Command.fifa_network_lookup()
         # create sport
@@ -296,28 +302,36 @@ class Command(BaseCommand):
         for match in matches:
             home_team = match.get('Home')
             away_team = match.get('Away')
-            if home_team and away_team:
-                home_team = home_team.get('ShortClubName')
-                away_team = away_team.get('ShortClubName')
-                # create team
-                home_team, created = Team.objects.get_or_create(name=home_team, league=league)
-                away_team, created = Team.objects.get_or_create(name=away_team, league=league)
-                match_id = match.get('IdMatch')
-                networks = match_map.get(match_id)
-                date = match.get('Date')      
-                if date:
-                    # format is 2023-07-31T10:00:00Z
-                    game_date = datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-                    name = f"{FIFA_NAME_PREFIX} {home_team} vs {away_team}"
-                    game, created_game = Game.objects.get_or_create(name=name, league=league, sport=sport, time=game_date)
 
-                    if created_game:
-                        game.teams.add(home_team)
-                        game.teams.add(away_team)
-                        for network in networks:
-                            game.networks.add(network)
-                        game.save()
-                        counter += 1
+            if home_team is None:
+                home_team = f'{FIFA_TBA}-A'
+            else:
+                home_team = home_team.get('ShortClubName')
+
+            if away_team is None:
+                away_team = f'{FIFA_TBA}-B'
+            else:
+                away_team = away_team.get('ShortClubName')
+
+
+            home_team, created = Team.objects.get_or_create(name=home_team, league=league)
+            away_team, created = Team.objects.get_or_create(name=away_team, league=league)
+            match_id = match.get('IdMatch')
+            networks = match_map.get(match_id)
+            date = match.get('Date')      
+            if date:
+                # format is 2023-07-31T10:00:00Z
+                game_date = datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+                name = f"{FIFA_NAME_PREFIX} {home_team} vs {away_team}"
+                game, created_game = Game.objects.get_or_create(name=name, league=league, sport=sport, time=game_date)
+
+                if created_game:
+                    game.teams.add(home_team)
+                    game.teams.add(away_team)
+                    for network in networks:
+                        game.networks.add(network)
+                    game.save()
+                    counter += 1
         return counter
     
     def au():
