@@ -3,6 +3,7 @@ import re
 import datetime
 import time
 import json
+import csv
 
 from bs4 import BeautifulSoup
 
@@ -31,6 +32,8 @@ FIFA_NAME_PREFIX = 'World Cup 2023 -'
 CREATE_DATA = True
 
 FIFA_TBA = 'TBD'
+
+NCAA_FILE = './games/data/ncaa_data/final.csv'
 
 class Command(BaseCommand):
     help = 'Adds games to the database'
@@ -133,72 +136,66 @@ class Command(BaseCommand):
         return counter
         
     def ncaa():
+        CSV_DATA = NCAA_FILE
         counter = 0
-        # date format is YYYYMMDD
-        # todays date
-        today_date = datetime.date.today()
-        #convert to string
-        today = today_date.strftime('%Y%m%d')
-        #get dates for the next 7 days
-        dates = []
-        for i in range(7):
-            date = today_date + datetime.timedelta(days=i)
-            dates.append({
-                'date_str': date.strftime('%Y%m%d'),
-                'date': date
-            })
-        # create sport
+        # create a sport if it doesn't exist
         sport, created = Sport.objects.get_or_create(name='basketball')
-        # create league
+        # create a league if it doesn't exist
         league, created = League.objects.get_or_create(name='NCAA', sport=sport)
-        
-        for date in dates:
-            date_str = date['date_str']
-            page = requests.get(NCAA_ENDPOINT + date_str)
-            soup = BeautifulSoup(page.content, "html.parser")
-            rows = soup.find_all("tr", class_="Table__TR")
-            for row in rows:
-                # find team
-                teams = row.find_all("span", class_="Table__Team")
-                team_names = [team.text for team in teams]
-                game_name = ' vs '.join(team_names)
-                network_selector = row.select_one(".Logo__Network img")
-                if network_selector:
-                    network_name = network_selector.attrs['alt']
-                else:
-                    network_name = None
-                date_selector = row.select_one(".date__col")
-                if date_selector:
-                    time_string = date_selector.text
-                    start_time_str = date_str + time_string + ' -0500'
-                    if time_string == 'LIVE':
-                        # set start time to current time
-                        start_time = datetime.datetime.now(tz=timezone.utc)
-                    else:
-                        start_time = datetime.datetime.strptime(start_time_str, '%Y%m%d%I:%M %p %z')
-                        start_time = start_time.astimezone(timezone.utc)
-                else:
+
+        # open csv file
+        with open(CSV_DATA, 'r') as csv_file:
+            # skip first line
+            next(csv_file)
+            # read csv file
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            # loop through each row
+            for row in csv_reader:
+                # get date and time
+                date = row[0]
+                time = row[1]
+                # handle when time is Noon
+                if time == 'Noon':
+                    time = '12:00 PM'
+                game_time = date + time
+                # convert to datetime (format is 202401117:00 PM)
+                try:
+                    game_date = datetime.datetime.strptime(game_time, '%Y%m%d%I:%M %p')
+                    # convert to utc
+                    game_date = game_date.astimezone(timezone.utc)
+                except ValueError:
+                    # skip game if date is not valid
+                    print(f'Invalid date: {game_time}')
                     continue
+
+                # get home team and away team
+                home_team = row[2]
+                away_team = row[3]
+                # get network
+                network = row[4]
+                # skip if no network
+                if len(network) == 0:
+                    continue
+                # turn network into a list
+                networks = network.split(',')
+                # create teams
+                home_team, created_home = Team.objects.get_or_create(name=home_team, league=league)
+                away_team, created_away = Team.objects.get_or_create(name=away_team, league=league)
                 # create game
-                if CREATE_DATA:
-                    game, created_game = Game.objects.get_or_create(name=game_name, time=start_time, league=league, sport=sport)
-                    counter += 1
-                    if created_game:
-                        if network_name:
-                            # create network
-                            network, network_created = Network.objects.get_or_create(name=network_name)
-                            # add network to game
-                            game.network = network
-                            game.save()
-                        for team in team_names:
-                            # remove rank from team name
-                            team = re.sub(r'\d+', '', team).strip()
-                            team, created_team = Team.objects.get_or_create(name=team, league=league)
-                            game.teams.add(team)
-                            game.save()
-            # pause 5 seconds
-            time.sleep(3)
+                game, created_game = Game.objects.get_or_create(name=f"{home_team} vs {away_team}", league=league, sport=sport, time=game_date)
+                counter += 1
+                if created_game:
+                    game.teams.add(home_team)
+                    game.teams.add(away_team)
+                    for network in networks:
+                        network, created = Network.objects.get_or_create(name=network)
+                        game.networks.add(network)
+                    game.save()
+                    print(counter)
         return counter
+            
+                    
+                    
             
     def phl():
         counter = 0
@@ -246,10 +243,10 @@ class Command(BaseCommand):
         Create a map where the key is the match id and
         the value is a list of networks
         """
-        USA_ID = 144
-        # response = requests.get(FIFA_NETWORK_LOOKUP)
-        # json = response.json()
-        json = Command.fifa_sample_fifa_watch()
+        USA_ID = 149
+        response = requests.get(FIFA_NETWORK_LOOKUP)
+        json = response.json()
+        # json = Command.fifa_sample_fifa_watch()
         data = json.get('Results')
         match_map = {}
         if data and data[USA_ID] and data[USA_ID].get('IdCountry') == 'USA':
@@ -290,9 +287,9 @@ class Command(BaseCommand):
     
     def fifa():
         counter = 0
-        # response = requests.get(FIFA_ENDPOINT)
-        # json = response.json()
-        json = Command.fifa_sample_data()
+        response = requests.get(FIFA_ENDPOINT)
+        json = response.json()
+        #json = Command.fifa_sample_data()
         matches = json.get('Results')
         match_map = Command.fifa_network_lookup()
         # create sport
@@ -399,7 +396,7 @@ class Command(BaseCommand):
             Network.objects.all().delete()
 
         leagues = {
-            # 'ncaa': ('NCAA', 'Successfully added {} NCAA games'),
+            'ncaa': ('NCAA', 'Successfully added {} NCAA games'),
             'wnba': ('WNBA', 'Successfully added {} WNBA games'),
             # 'phl': ('PHL', 'Successfully added {} PHL games'),
             'nwsl': ('NWSL', 'Successfully added {} NWSL games'),

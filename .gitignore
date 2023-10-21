@@ -4,3 +4,5 @@ __pycache__
 env
 notes.txt
 .DS_Store
+games/data/ncaa/*
+games/data/ncaa_data/*

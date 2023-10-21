@@ -19,6 +19,15 @@ fifa:
 au:
 	python manage.py add_games --fresh_data False --league au
 
+ncaa_scrape:
+	python manage.py ncaa_scrape --dry_run False
+
+ncaa_data:
+	python manage.py ncaa_data
+
+ncaa:
+	python manage.py add_games --fresh_data False --league ncaa
+
 clean:
 	python manage.py clean_games --all_games False 
 
@@ -36,6 +45,9 @@ clean_nwsl:
 
 clean_au:
 	python manage.py clean_games --all_games True --league "Athletes Unlimited"
+
+clean_ncaa:
+	python manage.py clean_games --all_games True --league NCAA
 
 dep:
 	python -m pip freeze > requirements.txt
