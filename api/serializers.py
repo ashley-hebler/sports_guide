@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 from rest_framework import serializers
-from games.models import Game, Sport
+from games.models import Game, Sport, Team
 
 
 class GameSerializer(serializers.ModelSerializer):
@@ -23,9 +23,15 @@ class GameSerializer(serializers.ModelSerializer):
         return local_time.astimezone().strftime("%A, %B %-d, %Y")
 
 
-class SportsSerializer(serializers.Serializer):
+class SportsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sport
-        fields = ['na']
-    
-        
+        depth = 1
+        fields = ['name', 'id']
+
+
+class TeamSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Team
+        depth = 1
+        fields = ['name', 'league', 'id']    

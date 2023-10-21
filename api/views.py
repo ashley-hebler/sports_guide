@@ -4,8 +4,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework import generics, viewsets
 
-from games.models import Game, Sport
-from .serializers import GameSerializer, SportsSerializer
+from games.models import Game, Sport, Team
+from .serializers import GameSerializer, SportsSerializer, TeamSerializer
 
 class GameList(generics.ListCreateAPIView):
     serializer_class = GameSerializer
@@ -50,3 +50,20 @@ class GamesUpcoming(generics.ListCreateAPIView):
 class SportsList(generics.ListCreateAPIView):
     queryset = Sport.objects.all()
     serializer_class = SportsSerializer
+
+class TeamsList(generics.ListCreateAPIView):
+    queryset = Team.objects.all()
+    serializer_class = TeamSerializer
+    def get_queryset(self):
+        queryset = Team.objects.all()
+        sport = self.request.query_params.get('sport')
+        league = self.request.query_params.get('league')
+        if sport:
+            queryset = queryset.filter(league__sport__name=sport)
+        if league:
+            # lowercase league name
+            league = league.lower()
+            # ignore case
+            queryset = queryset.filter(league__name__iexact=league)
+        return queryset
+    
