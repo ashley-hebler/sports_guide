@@ -23,7 +23,8 @@ PHL_ENDPOINT = 'https://www.oursportscentral.com/services/schedule/premier-hocke
 NWSL_ENDPOINT = 'https://d2nkt8hgeld8zj.cloudfront.net/services/nwsl.ashx/schedule?season'
 
 # from https://www.fifa.com/fifaplus/en/tournaments/womens/womensworldcup/australia-new-zealand2023/tv-programme?
-FIFA_ENDPOINT = 'https://api.fifa.com/api/v3/calendar/matches?language=en&count=500&idSeason=285026'
+FIFA_ENDPOINT = 'https://api.fifa.com/api/v3/calendar/matches?language=en&count=500'
+US_SOCCER = 'https://www.ussoccer.com/api/matches/upcoming/contestant/e70zl10x0ayu7y10ry0wi465a'
 
 FIFA_NETWORK_LOOKUP = 'https://api.fifa.com/api/v3/watch/season/285026?language=en'
 
@@ -193,10 +194,57 @@ class Command(BaseCommand):
                     game.save()
                     print(counter)
         return counter
+                             
+    def us_soccer():
+        counter = 0
+        response = requests.get(US_SOCCER)
+        json = response.json()
+        for game in json:
+            # get date and time
+            date = game.get('date')
+            # add timezone as UTC
+            date = date + 'Z'
+            date_format = "%Y-%m-%dT%H:%M:%SZ"
+            game_date = datetime.datetime.strptime(date, date_format).replace(tzinfo=timezone.utc)
+            game_date = game_date.astimezone(timezone.utc)      
             
-                    
-                    
-            
+            # get network
+            networks = game.get('broadcastLinks', [])
+            network_list = []
+            for network in networks:
+                network = network.get('imageAltText')
+                if network:
+                    network_list.append(network)
+            # teams
+            teams = game.get('contestants', [])
+            home_team = None
+            away_team = None
+            for team in teams:
+                if team.get('position') == 'home':
+                    home_team = team.get('officialName')
+                elif team.get('position') == 'away':
+                    away_team = team.get('officialName')
+
+            # create sport
+            sport, created = Sport.objects.get_or_create(name='soccer')
+            # create league
+            league, created = League.objects.get_or_create(name='US Soccer', sport=sport)
+            # create teams
+            home_team, created_home = Team.objects.get_or_create(name=home_team, league=league)
+            away_team, created_away = Team.objects.get_or_create(name=away_team, league=league)
+            # create game
+            game, created_game = Game.objects.get_or_create(name=f"{home_team} vs {away_team}", league=league, sport=sport, time=game_date)
+            counter += 1
+            if created_game:
+                game.teams.add(home_team)
+                game.teams.add(away_team)
+                for network in network_list:
+                    network, created = Network.objects.get_or_create(name=network)
+                    game.networks.add(network)
+                game.save()
+        return counter
+
+
     def phl():
         counter = 0
         page = requests.get(PHL_ENDPOINT)
@@ -402,6 +450,7 @@ class Command(BaseCommand):
             'nwsl': ('NWSL', 'Successfully added {} NWSL games'),
             'fifa': ('FIFA', 'Successfully added {} FIFA games'),
             'au': ('AU', 'Successfully added {} softball games'),
+            'us_soccer': ('us_soccer', 'Successfully added {} US Soccer games'),
         }
 
         league_name = options['league']

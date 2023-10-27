@@ -16,6 +16,9 @@ nwsl:
 fifa:
 	python manage.py add_games --fresh_data False --league fifa
 
+us_soccer:
+	python manage.py add_games --fresh_data False --league us_soccer
+
 au:
 	python manage.py add_games --fresh_data False --league au
 
@@ -48,6 +51,9 @@ clean_au:
 
 clean_ncaa:
 	python manage.py clean_games --all_games True --league NCAA
+
+clean_us_soccer:
+	python manage.py clean_games --all_games True --league "US Soccer"
 
 dep:
 	python -m pip freeze > requirements.txt
