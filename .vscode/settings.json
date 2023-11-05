@@ -2,6 +2,7 @@
     "conventionalCommits.scopes": [
         "ncaa",
         "api",
-        "us-soccer"
+        "us-soccer",
+        "deps"
     ]
 }
