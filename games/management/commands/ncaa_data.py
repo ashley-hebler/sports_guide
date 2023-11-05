@@ -118,11 +118,14 @@ class Command(BaseCommand):
                 # with open(f'./games/data/ncaa-{game_name}-row.html', 'w') as html_file:
                 #     html_file.write(str(row))
                 network_selector = row.select_one(".broadcast__col img")
+                network_selector_2 = row.select_one(".network-name")
                 network_name = None
                 if network_selector:
                     network_name = network_selector.attrs['alt']
+                elif network_selector_2:
+                    # try to find text
+                    network_name = network_selector_2.get_text()
                 else:
-                    # don't add game if no network
                     continue
                 date_selector = row.select_one(".date__col")
                 if date_selector:

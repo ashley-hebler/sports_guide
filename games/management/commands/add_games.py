@@ -189,6 +189,7 @@ class Command(BaseCommand):
                     game.teams.add(home_team)
                     game.teams.add(away_team)
                     for network in networks:
+                        print(f"{home_team} v {away_team} on {network}")
                         network, created = Network.objects.get_or_create(name=network)
                         game.networks.add(network)
                     game.save()
