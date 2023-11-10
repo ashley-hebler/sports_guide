@@ -71,7 +71,7 @@ class Command(BaseCommand):
                     if date:
                         date = datetime.datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')
                         eastern_timezone = pytz.timezone('US/Eastern')
-                        game_date = eastern_timezone.localize(game_date)
+                        game_date = eastern_timezone.localize(date)
                         game_date = date.astimezone(timezone.utc)
                         game, created_game = Game.objects.get_or_create(name=f"{home_team_name} vs {opponent_name}", league=league, sport=sport, time=game_date)
 
