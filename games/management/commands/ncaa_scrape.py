@@ -2,14 +2,11 @@
 # python manage.py ncaa_scrape
 import os
 from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
 import datetime
 import requests
-import textract
 from time import sleep
 from bs4 import BeautifulSoup
 from .utils import str2bool
-import openai
 
 
 NCAA_ENDPOINT = 'https://www.espn.com/womens-college-basketball/schedule/_/date/'
