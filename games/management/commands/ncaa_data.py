@@ -1,3 +1,4 @@
+import re
 import os
 import csv
 import datetime
@@ -17,6 +18,10 @@ NCAA_STEP_4 = NCAA_DATA_DIR + 'ncaa-espn-conf.csv'
 NCAA_FINAL = NCAA_DATA_DIR + 'final.csv'
 
 class Command(BaseCommand):
+    def strip_rank(team):
+        # remove any number in front of team name
+        name_without_numbers = re.sub(r'^\d+', '', team)
+        return name_without_numbers
     
     def get_ncaa_html(date_str):
         with open(f'./games/data/ncaa/{date_str}.html') as html_file:
@@ -112,7 +117,7 @@ class Command(BaseCommand):
             for row in rows:
                 # find team
                 teams = row.find_all("span", class_="Table__Team")
-                team_names = [team.text for team in teams]
+                team_names = [Command.strip_rank(team.text) for team in teams]
                 game_name = ' vs '.join(team_names)
                 # create an html file for row  
                 # with open(f'./games/data/ncaa-{game_name}-row.html', 'w') as html_file:
@@ -146,7 +151,7 @@ class Command(BaseCommand):
 
                 # create csv file date, time, home, away, network
                 with open(NCAA_STEP_3, 'a') as csv_file:
-                    csv_file.write(f'{date},{time_string},{team_names[0]},{team_names[1]},{network_name}\n')
+                    csv_file.write(f'{date},{time_string},{(team_names[0])},{team_names[1]},{network_name}\n')
 
     def step_3(self):
         # Define the paths to the two CSV files
