@@ -4,6 +4,7 @@ import datetime
 import time
 import json
 import csv
+import pytz
 
 from bs4 import BeautifulSoup
 
@@ -69,6 +70,8 @@ class Command(BaseCommand):
                     date = event.get('date')
                     if date:
                         date = datetime.datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')
+                        eastern_timezone = pytz.timezone('US/Eastern')
+                        game_date = eastern_timezone.localize(game_date)
                         game_date = date.astimezone(timezone.utc)
                         game, created_game = Game.objects.get_or_create(name=f"{home_team_name} vs {opponent_name}", league=league, sport=sport, time=game_date)
 
@@ -162,6 +165,8 @@ class Command(BaseCommand):
                 # convert to datetime (format is 202401117:00 PM)
                 try:
                     game_date = datetime.datetime.strptime(game_time, '%Y%m%d%I:%M %p')
+                    eastern_timezone = pytz.timezone('US/Eastern')
+                    game_date = eastern_timezone.localize(game_date)
                     # convert to utc
                     game_date = game_date.astimezone(timezone.utc)
                 except ValueError:
