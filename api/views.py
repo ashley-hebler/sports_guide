@@ -39,6 +39,9 @@ class GameList(generics.ListCreateAPIView):
 
 class GamesToday(generics.ListCreateAPIView):
     queryset = Game.objects.filter(time__date=datetime.date.today()).order_by('time')
+    # remove games more than 3 hours ago
+    current_time = datetime.datetime.now()
+    queryset = queryset.filter(time__gte=current_time - datetime.timedelta(hours=3))
     serializer_class = GameSerializer
 
 class GamesUpcoming(generics.ListCreateAPIView):
