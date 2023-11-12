@@ -72,5 +72,7 @@ class TeamsList(generics.ListCreateAPIView):
             league = league.lower()
             # ignore case
             queryset = queryset.filter(league__name__iexact=league)
+        # sort by name
+        queryset = queryset.order_by('name')
         return queryset
     
