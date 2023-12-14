@@ -30,9 +30,6 @@ class Command(BaseCommand):
         return html
 
     def step_1(self):
-        # Define a dictionary to store the merged data
-        merged_data = {}
-
         month_dict = {
             'October': '10',
             'November': '11',
@@ -43,10 +40,15 @@ class Command(BaseCommand):
             'April': '04',
             'May': '05',
         }
+        # Write the data to a new CSV file
+        with open(NCAA_STEP_2, 'w', newline='') as csvfile_new:
+            fieldnames = ['Date', 'Time', 'Home Team', 'Away', 'Network']
+            writer = csv.DictWriter(csvfile_new, fieldnames=fieldnames)
+            writer.writeheader() 
 
         # Read the data from a CSV file
-        with open(NCAA_STEP_1, newline='') as csvfile:
-            reader = csv.DictReader(csvfile)
+        with open(NCAA_STEP_1, newline='') as csvfile_old:
+            reader = csv.DictReader(csvfile_old)
             for row in reader:
                 date = row['Date']
                 time = row['Time']
@@ -79,27 +81,13 @@ class Command(BaseCommand):
                 # Combine date and time into a single key
                 date_time = f"{date},{time}"
 
-                # Check if the date_time already exists in the merged_data dictionary
-                if date_time in merged_data:
-                    # If it exists, append the network to the existing value
-                    merged_data[date_time]['Network'] += f", {network}"
-                else:
-                    # If it doesn't exist, create a new entry in the dictionary
-                    merged_data[date_time] = {
-                        'Date': date,
-                        'Time': time,
-                        'Home Team': home_team,
-                        'Away': away_team,
-                        'Network': network
-                    }
+                # if network is empty, skip
+                if network == '':
+                    continue
 
-        # Write the merged data back to a CSV file
-        with open(NCAA_STEP_2, 'w', newline='') as csvfile:
-            fieldnames = ['Date', 'Time', 'Home Team', 'Away', 'Network']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            for data in merged_data.values():
-                writer.writerow(data)
+                # Add data to csv file
+                with open(NCAA_STEP_2, 'a', newline='') as csvfile_new:
+                    csvfile_new.write(f'{date},{time},{home_team},{away_team},{network}\n')
  
     def step_2(self):
         counter = 0

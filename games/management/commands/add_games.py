@@ -35,7 +35,7 @@ CREATE_DATA = True
 
 FIFA_TBA = 'TBD'
 
-NCAA_FILE = './games/data/ncaa_data/final.csv'
+NCAA_FILE = './games/data/ncaa_data/ncaa-espn-conf.csv'
 
 class Command(BaseCommand):
     help = 'Adds games to the database'
@@ -177,6 +177,9 @@ class Command(BaseCommand):
                 # get home team and away team
                 home_team = row[2]
                 away_team = row[3]
+                # clean up team names (remove spaces before and after)
+                home_team = home_team.strip()
+                away_team = away_team.strip()
                 # get network
                 network = row[4]
                 # skip if no network

@@ -34,6 +34,9 @@ ncaa:
 clean:
 	python manage.py clean_games --all_games False 
 
+clean_teams:
+	python manage.py clean_teams
+
 really_clean:
 	python manage.py clean_games --all_games True
 
