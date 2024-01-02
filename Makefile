@@ -38,7 +38,7 @@ clean_teams:
 	python manage.py clean_teams
 
 really_clean:
-	python manage.py clean_games --all_games True
+	python manage.py clean_games --all_games True --all_models True
 
 clean_fifa:
 	python manage.py clean_games --all_games True --league FIFA

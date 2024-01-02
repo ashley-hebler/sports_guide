@@ -230,10 +230,12 @@ class Command(BaseCommand):
             away_team = None
             for team in teams:
                 if team.get('position') == 'home':
-                    home_team = team.get('officialName')
+                    home_team = team.get('code')
                 elif team.get('position') == 'away':
-                    away_team = team.get('officialName')
+                    away_team = team.get('code')
 
+            if home_team is None or away_team is None:
+                continue
             # create sport
             sport, created = Sport.objects.get_or_create(name='soccer')
             # create league

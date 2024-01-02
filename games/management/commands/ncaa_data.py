@@ -11,10 +11,12 @@ from django.utils import timezone
 
 NCAA_FILE_DIR = './games/data/ncaa/'
 NCAA_DATA_DIR = './games/data/ncaa_data/'
-NCAA_STEP_1 ='./games/data/ncaa_conf_pdfs.csv'
+NCAA_STEP_1a = './games/data/ncaa_conf_bigeast.csv'
+NCAA_STEP_1b ='./games/data/ncaa_conf_pdfs.csv'
 NCAA_STEP_2 = NCAA_DATA_DIR + 'ncaa-conf.csv'
 NCAA_STEP_3 = NCAA_DATA_DIR + 'ncaa-espn.csv'
 NCAA_STEP_4 = NCAA_DATA_DIR + 'ncaa-espn-conf.csv'
+
 NCAA_FINAL = NCAA_DATA_DIR + 'final.csv'
 
 class Command(BaseCommand):
@@ -29,6 +31,24 @@ class Command(BaseCommand):
                 html = BeautifulSoup(page, "html.parser")
         return html
 
+    def dedupe_games(games_a, games_b):
+        merged_games = {}
+        
+        # Add games from games_a to the merged dictionary
+        for game in games_a:
+            key = (game['home_team'], game['away_team'], game['date'])
+            merged_games[key] = game
+
+        # Add games from games_b to the merged dictionary, excluding duplicates
+        for game in games_b:
+            key = (game['home_team'], game['away_team'], game['date'])
+            if key not in merged_games:
+                merged_games[key] = game
+
+        # Convert the merged dictionary back to a list
+        deduped_games = list(merged_games.values())
+        return deduped_games
+    
     def step_1(self):
         month_dict = {
             'October': '10',
@@ -40,15 +60,28 @@ class Command(BaseCommand):
             'April': '04',
             'May': '05',
         }
-        # Write the data to a new CSV file
-        with open(NCAA_STEP_2, 'w', newline='') as csvfile_new:
-            fieldnames = ['Date', 'Time', 'Home Team', 'Away', 'Network']
-            writer = csv.DictWriter(csvfile_new, fieldnames=fieldnames)
-            writer.writeheader() 
-
+        games_a = []
+        games_b = []
         # Read the data from a CSV file
-        with open(NCAA_STEP_1, newline='') as csvfile_old:
-            reader = csv.DictReader(csvfile_old)
+        with open(NCAA_STEP_1a, newline='') as csvfile_old_a:
+            reader = csv.DictReader(csvfile_old_a)
+            for row in reader:
+                date = row['Date']
+                time = row['Time']
+                home_team = row['Home Team']
+                away_team = row['Away']
+                network = row['Network']
+                if network:
+                    games_a.append({
+                        'date': date,
+                        'time': time,
+                        'home_team': home_team,
+                        'away_team': away_team,
+                        'network': network,
+                    })
+       
+        with open(NCAA_STEP_1b, newline='') as csvfile_old_b:
+            reader = csv.DictReader(csvfile_old_b)
             for row in reader:
                 date = row['Date']
                 time = row['Time']
@@ -84,11 +117,24 @@ class Command(BaseCommand):
                 # if network is empty, skip
                 if network == '':
                     continue
-
-                # Add data to csv file
-                with open(NCAA_STEP_2, 'a', newline='') as csvfile_new:
-                    csvfile_new.write(f'{date},{time},{home_team},{away_team},{network}\n')
- 
+                
+                games_b.append({
+                    'date': date,
+                    'time': time,
+                    'home_team': home_team,
+                    'away_team': away_team,
+                    'network': network,
+                })
+        
+        # dedupe games_a and games_b
+        games = Command.dedupe_games(games_a, games_b)
+        # Write the deduplicated data to a new CSV file
+        with open(NCAA_STEP_2, 'w', newline='') as output_csv:
+            writer = csv.writer(output_csv)
+            writer.writerow(['Date', 'Time', 'Home Team', 'Away', 'Network'])
+            for game in games:
+                writer.writerow(game.values())
+                   
     def step_2(self):
         counter = 0
         # add heading to csv file
@@ -99,6 +145,9 @@ class Command(BaseCommand):
         dates = [f[:-5] for f in os.listdir(NCAA_FILE_DIR) if os.path.isfile(os.path.join(NCAA_FILE_DIR, f))]
         
         for date in dates:
+            # if file doesn't look like a date, skip
+            if len(date) != 8:
+                continue
             # get html
             html = Command.get_ncaa_html(date)
             rows = html.find_all("tr", class_="Table__TR")
@@ -174,7 +223,6 @@ class Command(BaseCommand):
             writer.writeheader()
             writer.writerows(merged_data)
 
-        print(f'Merged data has been saved to {merged_file}')
 
 
         # now dedupe the merged file
@@ -202,6 +250,7 @@ class Command(BaseCommand):
             writer.writerow(['Date', 'Time', 'Home Team', 'Away', 'Network'])
             for row in deduplicated_data.values():
                 writer.writerow(row)
+            print(f'All data has been saved to {final_file}')
     
     def handle(self, *args, **options):
         Command.step_1(self)
