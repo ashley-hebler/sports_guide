@@ -16,10 +16,12 @@ from .utils import str2bool
 
 
 WNBA_ENDPOINT = 'https://data.wnba.com/data/5s/v2015/json/mobile_teams/wnba/2023/league/10_full_schedule_tbds.json'
+WNBA_ENDPOINT = 'https://data.wnba.com/data/5s/v2015/json/mobile_teams/wnba/2024/league/10_full_schedule.json'
+# this looked promising too https://cdn.wnba.com/static/json/staticData/scheduleLeagueV2_1.json
 
 NCAA_ENDPOINT = 'https://www.espn.com/womens-college-basketball/schedule/_/date/'
 
-PHL_ENDPOINT = 'https://www.oursportscentral.com/services/schedule/premier-hockey-federation/l-231'
+PWHL_ENDPOINT = 'https://www.thepwhl.com/en/where-to-watch'
 
 NWSL_ENDPOINT = 'https://d2nkt8hgeld8zj.cloudfront.net/services/nwsl.ashx/schedule?season'
 
@@ -39,6 +41,22 @@ NCAA_FILE = './games/data/ncaa_data/ncaa-espn-conf.csv'
 
 class Command(BaseCommand):
     help = 'Adds games to the database'
+
+    def convert_local_time_to_utc(local_time_str, city):
+        # Define the time zone for the given city
+        local_tz = pytz.timezone(city)
+
+        # Parse the local time string to a datetime object
+        # format is 01/24/2024 07:00 PM
+        local_time = datetime.datetime.strptime(local_time_str, '%m/%d/%Y %I:%M %p')
+
+        # Localize the datetime object to the specified time zone
+        local_time = local_tz.localize(local_time)
+
+        # Convert the localized time to UTC
+        utc_time = local_time.astimezone(pytz.utc)
+
+        return utc_time
 
     def nwsl():
         counter = 0
@@ -256,45 +274,71 @@ class Command(BaseCommand):
         return counter
 
 
-    def phl():
+    def pwhl():
+        # https://gist.github.com/heyalexej/8bf688fd67d7199be4a1682b3eec7568
+
+        cities = {
+            'Toronto': 'America/Toronto',
+            'Boston': 'America/New_York',
+            'Minnesota': 'America/Chicago',
+            'Ottawa': 'America/Toronto',
+            'Montreal': 'America/Montreal',
+            'New York': 'America/New_York',
+        }
         counter = 0
-        page = requests.get(PHL_ENDPOINT)
+        # set user agent to get around 403 error
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        page = requests.get(PWHL_ENDPOINT, headers=headers)
         soup = BeautifulSoup(page.content, "html.parser")
-        rows = soup.find_all("tr", class_="sked")
-        for row in rows:
-            time_selector = row.select_one("td:last-child")
-            if time_selector and time_selector.text != 'Final' and time_selector.text != 'Ppd.':
-                time_str = time_selector.text
-                # convert p.m. to pm and make uppercase
-                time_str = time_str.replace('p.m.', 'PM').replace('a.m.', 'AM').upper()                
-                date_selector = row.select_one("td:first-child")
-                # eastern time offset
-                date_str = date_selector.text + ' ' + time_str + ' -0500'
-                # add 0 in front of single digit days
-                date = datetime.datetime.strptime(date_str, '%B %d, %Y %I:%M %p %z')
-                date = date.astimezone(timezone.utc)
-                # get links
-                links = row.select("a")
+        schedule_table = soup.find('table')
+        if schedule_table:
+            print('Found table')
+            rows = schedule_table.find_all('tr')
+            for row in rows[1:]:  # Skipping the header row
+                # get cells
+                cells = row.find_all("td")
+                # skip if no cells
+                if len(cells) == 0:
+                    continue
+                # get date
+                date = cells[0].text.strip()
+                # get time
+                time = cells[1].text.strip()
+                # get home team
+                home_team = cells[2].text.strip()
+                # get away team
+                away_team = cells[3].text.strip()
+                print(f"{date} {time} {home_team} vs {away_team}")
+                # add new cities to cities
+                if cities.get(home_team) is None:
+                    continue
+                utc_time = Command.convert_local_time_to_utc(f'{date} {time}', cities.get(home_team))
+                # network
+                network = 'YouTube'
+                sport = 'hockey'
+                league = 'PWHL'
                 # create sport
-                sport, created = Sport.objects.get_or_create(name='hockey')
+                sport, created = Sport.objects.get_or_create(name=sport)
                 # create league
-                league, created = League.objects.get_or_create(name='PHL', sport=sport)
-                teams = []
-                for link in links:
-                    team_name = link.text
-                    teams.append(team_name)
-                # create name from links
-                game_name = ' vs '.join(teams)
-                if CREATE_DATA:
-                    network, network_created = Network.objects.get_or_create(name='ESPN+')
-                    game, created_game = Game.objects.get_or_create(name=game_name, time=date, league=league, sport=sport)
+                league, created = League.objects.get_or_create(name=league, sport=sport)
+                # create teams
+                home_team, created_home = Team.objects.get_or_create(name=home_team, league=league)
+                away_team, created_away = Team.objects.get_or_create(name=away_team, league=league)
+                # create game\
+                try:
+                    game, created_game = Game.objects.get_or_create(name=f"{home_team} vs {away_team}", league=league, sport=sport, time=utc_time)
+                    # add teams to game
+                    game.teams.add(home_team)
+                    game.teams.add(away_team)
+                    # add network to game
+                    network, created = Network.objects.get_or_create(name=network)
+                    game.networks.add(network)
+                    game.save()
                     counter += 1
-                    if created_game:
-                        game.networks.add(network)
-                        for team in teams:
-                            team, created_team = Team.objects.get_or_create(name=team, league=league)
-                            game.teams.add(team)
-                            game.save()
+                except Exception as e:
+                    print(f'Error creating game: {e}')
+                    continues
+
         return counter        
 
     def fifa_network_lookup():
@@ -457,7 +501,7 @@ class Command(BaseCommand):
         leagues = {
             'ncaa': ('NCAA', 'Successfully added {} NCAA games'),
             'wnba': ('WNBA', 'Successfully added {} WNBA games'),
-            # 'phl': ('PHL', 'Successfully added {} PHL games'),
+            'pwhl': ('pwhl', 'Successfully added {} pwhl games'),
             'nwsl': ('NWSL', 'Successfully added {} NWSL games'),
             'fifa': ('FIFA', 'Successfully added {} FIFA games'),
             'au': ('AU', 'Successfully added {} softball games'),

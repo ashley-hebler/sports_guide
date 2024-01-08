@@ -10,6 +10,9 @@ data:
 wnba:
 	python manage.py add_games --fresh_data False --league wnba
 
+pwhl:
+	python manage.py add_games --fresh_data False --league pwhl
+
 nwsl:
 	python manage.py add_games --fresh_data False --league nwsl
 
@@ -54,6 +57,9 @@ clean_au:
 
 clean_ncaa:
 	python manage.py clean_games --all_games True --league NCAA
+
+clean_pwhl:
+	python manage.py clean_games --all_games True --league PWHL
 
 clean_us_soccer:
 	python manage.py clean_games --all_games True --league "US Soccer"
