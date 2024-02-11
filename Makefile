@@ -69,3 +69,6 @@ dep:
 
 scrape_au:
 	scrapy runspider ./games/management/commands/au_scrape.py -o ./games/data/au_softball.json
+
+rank:
+	python manage.py rank_teams
