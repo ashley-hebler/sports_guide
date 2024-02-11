@@ -230,7 +230,9 @@ class Command(BaseCommand):
             # get date and time
             date = game.get('date')
             # add timezone as UTC
-            date = date + 'Z'
+            # if date dose not have a timezone, add UTC
+            if date[-1] != 'Z':
+                date = date + 'Z'
             date_format = "%Y-%m-%dT%H:%M:%SZ"
             game_date = datetime.datetime.strptime(date, date_format).replace(tzinfo=timezone.utc)
             game_date = game_date.astimezone(timezone.utc)      

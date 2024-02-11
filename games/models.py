@@ -22,6 +22,8 @@ class Game(models.Model):
 class Team(models.Model):
     name = models.CharField(max_length=200)
     league = models.ForeignKey('League', on_delete=models.CASCADE, null=True)
+    rank = models.IntegerField(null=True)
+    conference = models.CharField(max_length=200, null=True)
 
     def __str__(self):
         return self.name
