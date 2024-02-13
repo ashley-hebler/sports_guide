@@ -34,4 +34,4 @@ class TeamSerializer(serializers.ModelSerializer):
     class Meta:
         model = Team
         depth = 1
-        fields = ['name', 'league', 'id']    
+        fields = ['name', 'league', 'id', 'rank', 'conference']    

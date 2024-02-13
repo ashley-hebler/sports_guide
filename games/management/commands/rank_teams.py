@@ -47,6 +47,12 @@ class Command(BaseCommand):
         # get all teams in the league
         teams = Team.objects.filter(league__name='NCAA')
         for team in teams:
+            # remove all ranks
+            if team.rank:
+                team.rank = None
+                team.save()
+                print(f'Removed rank from {team.name}')
+        for team in teams:
             # if team name is in the list of found teams
             for found_team in found_teams:
                 if team.name in found_team:

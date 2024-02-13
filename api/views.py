@@ -65,6 +65,7 @@ class TeamsList(generics.ListCreateAPIView):
         queryset = Team.objects.all()
         sport = self.request.query_params.get('sport')
         league = self.request.query_params.get('league')
+        order = self.request.query_params.get('order')
         if sport:
             queryset = queryset.filter(league__sport__name=sport)
         if league:
@@ -72,7 +73,15 @@ class TeamsList(generics.ListCreateAPIView):
             league = league.lower()
             # ignore case
             queryset = queryset.filter(league__name__iexact=league)
-        # sort by name
-        queryset = queryset.order_by('name')
+        # sort by name or order
+        
+        if order is not None:
+            fields = ['rank', '-rank', 'name', '-name']
+            if order in fields:
+                queryset = queryset.order_by(order)
+            else:
+                raise ValidationError({'errror': 'order field must be in ' + ', '.join(fields)})
+        else:
+            queryset = queryset.order_by('name')
         return queryset
     
