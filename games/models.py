@@ -11,6 +11,7 @@ class Game(models.Model):
     sport = models.ForeignKey('Sport', on_delete=models.CASCADE, null=True)
     teams = models.ManyToManyField('Team')
     networks = models.ManyToManyField('Network')
+    event = models.CharField(max_length=200, null=True)
 
 
     def __str__(self):

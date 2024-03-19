@@ -40,9 +40,12 @@ class Command(BaseCommand):
             # get title of abbr tag
             team_name = abbr[0]['title']
             # get the rank
-            rank = int(cols[0].text)
-            print(f'Ranked {team_name} at {rank}')
-            found_teams.append((team_name, rank))
+            try:
+                rank = int(cols[0].text)
+                print(f'Ranked {team_name} at {rank}')
+                found_teams.append((team_name, rank))
+            except ValueError:
+                print(f'Could not rank {team_name}')
         # update the teams
         # get all teams in the league
         teams = Team.objects.filter(league__name='NCAA')

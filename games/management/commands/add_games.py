@@ -28,6 +28,8 @@ NWSL_ENDPOINT = 'https://d2nkt8hgeld8zj.cloudfront.net/services/nwsl.ashx/schedu
 # from https://www.fifa.com/fifaplus/en/tournaments/womens/womensworldcup/australia-new-zealand2023/tv-programme?
 FIFA_ENDPOINT = 'https://api.fifa.com/api/v3/calendar/matches?language=en&count=500'
 US_SOCCER = 'https://www.ussoccer.com/api/matches/upcoming/contestant/e70zl10x0ayu7y10ry0wi465a'
+# US_SOCCER = 'https://www.ussoccer.com/api/scoreboard/contestant/e70zl10x0ayu7y10ry0wi465a,9vh2u1p4ppm597tjfahst2m3n,bo858sll0r8nayyt5smdu3pxs,ec3tww97m7qojokgz53yr44em,7a7uyvix8axi28h7d3bwl4tbe,69m5c06m9up1j8vf8ulnb80xu,x1zdh3b7nwu0ql0uc5tgic9e,bvwww6axicyq6121pawu2fq7k,2vnxw9nc0zq05fdawsdy9mc1n,be84r8u96b8jh66dwbv9b4qjk'
+# US_SOCCER = 'https://www.ussoccer.com/api/scoreboard/contestant/e70zl10x0ayu7y10ry0wi465a'
 
 FIFA_NETWORK_LOOKUP = 'https://api.fifa.com/api/v3/watch/season/285026?language=en'
 
@@ -39,8 +41,26 @@ FIFA_TBA = 'TBD'
 
 NCAA_FILE = './games/data/ncaa_data/ncaa-espn-conf.csv'
 
+NCAA_MARCH_MADNESS = 'https://www.ncaa.com/news/basketball-women/article/2024-03-17/2024-march-madness-womens-ncaa-tournament-schedule-dates-times'
+
 class Command(BaseCommand):
     help = 'Adds games to the database'
+
+    def month_to_num(month):
+        return{
+            'January' : 1,
+            'February' : 2,
+            'March' : 3,
+            'April' : 4,
+            'May' : 5,
+            'June' : 6,
+            'July' : 7,
+            'August' : 8,
+            'September' : 9, 
+            'October' : 10,
+            'November' : 11,
+            'December' : 12
+        }[month]
 
     def convert_local_time_to_utc(local_time_str, city):
         # Define the time zone for the given city
@@ -158,69 +178,167 @@ class Command(BaseCommand):
         return counter
         
     def ncaa():
-        CSV_DATA = NCAA_FILE
         counter = 0
-        # create a sport if it doesn't exist
-        sport, created = Sport.objects.get_or_create(name='basketball')
-        # create a league if it doesn't exist
-        league, created = League.objects.get_or_create(name='NCAA', sport=sport)
+        url = NCAA_MARCH_MADNESS
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        headings_that_look_like_dates = soup.find_all('h3')
+        key_words = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        if headings_that_look_like_dates:
+            for heading in headings_that_look_like_dates:
+                if any(word in heading.text for word in key_words):
+                    heading_text = heading.text
+                    # example Sunday, March 24 — Second round
+                    heading_split = heading_text.split('—')[0]
+                    day_full = heading_split.split(',')[1]
+                    day_split = day_full.strip().split(' ')
+                    month = Command.month_to_num(day_split[0])
+                    day = day_split[1]
+                    day_title = heading_text.split('—')[1]
+                    
+                    games = heading.find_next('ul')
+                    if games:
+                        games = games.find_all('li')
+                        for game in games:
+                            # example (16) Sacred Heart vs. (16) Presbyterian | 7 p.m. | ESPNU
+                            # split by |
+                            game_info = game.text.split('|')
+                            if len(game_info) == 3:
+                                teams = game_info[0]
+                                time = game_info[1]
+                                network = game_info[2]
 
-        # open csv file
-        with open(CSV_DATA, 'r') as csv_file:
-            # skip first line
-            next(csv_file)
-            # read csv file
-            csv_reader = csv.reader(csv_file, delimiter=',')
-            # loop through each row
-            for row in csv_reader:
-                # get date and time
-                date = row[0]
-                time = row[1]
-                # handle when time is Noon
-                if time == 'Noon':
-                    time = '12:00 PM'
-                game_time = date + time
-                # convert to datetime (format is 202401117:00 PM)
-                try:
-                    game_date = datetime.datetime.strptime(game_time, '%Y%m%d%I:%M %p')
-                    eastern_timezone = pytz.timezone('US/Eastern')
-                    game_date = eastern_timezone.localize(game_date)
-                    # convert to utc
-                    game_date = game_date.astimezone(timezone.utc)
-                except ValueError:
-                    # skip game if date is not valid
-                    print(f'Invalid date: {game_time}')
-                    continue
+                                # convert time to datetime (time is Eastern)
+                                time = time.strip()
+                                time = time.replace('p.m.', 'PM')
+                                time = time.replace('a.m.', 'AM')
+                                # add 00 to time if it's missing
+                                time_split = time.split(' ')
+                                time_number = time_split[0]
+                                
+                                if time_number == 'Noon':
+                                    time_number = '12:00'
+                                    time_am_pm = 'PM'
+                                elif len(str(time_number)) < 4:
+                                    time_number = f'{time_number}:00'
+                                    time_am_pm = time_split[1]
+                                else:
+                                    time = time_number
+                                    time_am_pm = time_split[1]
 
-                # get home team and away team
-                home_team = row[2]
-                away_team = row[3]
-                # clean up team names (remove spaces before and after)
-                home_team = home_team.strip()
-                away_team = away_team.strip()
-                # get network
-                network = row[4]
-                # skip if no network
-                if len(network) == 0:
-                    continue
-                # turn network into a list
-                networks = network.split(',')
-                # create teams
-                home_team, created_home = Team.objects.get_or_create(name=home_team, league=league)
-                away_team, created_away = Team.objects.get_or_create(name=away_team, league=league)
-                # create game
-                game, created_game = Game.objects.get_or_create(name=f"{home_team} vs {away_team}", league=league, sport=sport, time=game_date)
-                counter += 1
-                if created_game:
-                    game.teams.add(home_team)
-                    game.teams.add(away_team)
-                    for network in networks:
-                        print(f"{home_team} v {away_team} on {network}")
-                        network, created = Network.objects.get_or_create(name=network)
-                        game.networks.add(network)
-                    game.save()
-                    print(counter)
+                                #%m/%d/%Y %I:%M %p
+                                date_str = f'{month}/{day}/2024 {time_number} {time_am_pm}'
+                                # convert to utc
+                                game_date = Command.convert_local_time_to_utc(date_str, 'US/Eastern')
+
+                                # split teams by vs.
+                                teams = teams.split('vs.')
+                                # get rank from team
+                                clean_teams = []
+                                for team in teams:
+                                    rank = re.findall(r'\d+', team)
+                                    if len(rank) > 0:
+                                        rank = rank[0]
+                                        team = team.replace(rank, '').strip()
+                                    else:
+                                        rank = None
+                                    team = team.strip()
+                                    # remove empty parentheses
+                                    team = team.replace('()', '')
+                                    clean_teams.append((team, rank))
+                                home_team_name = clean_teams[0][0]
+                                away_team_name = clean_teams[1][0]
+                                home_team_rank = clean_teams[0][1]
+                                away_team_rank = clean_teams[1][1]
+
+                                print(f'{home_team_name} vs {away_team_name} on {game_date} on {network}')
+
+                                # create sport
+                                sport, created = Sport.objects.get_or_create(name='basketball')
+                                # create league
+                                league, created = League.objects.get_or_create(name='NCAA', sport=sport)
+                                # create teams
+                                home_team, created_home = Team.objects.get_or_create(name=home_team_name, league=league, rank=home_team_rank)
+                                away_team, created_away = Team.objects.get_or_create(name=away_team_name, league=league, rank=away_team_rank)
+                                # create game
+                                game, created_game = Game.objects.get_or_create(name=f"{home_team_name} vs {away_team_name}", league=league, sport=sport, time=game_date, event=day_title)
+
+                                if created_game:
+                                    counter += 1
+                                    game.teams.add(home_team)
+                                    game.teams.add(away_team)
+                                    network, created = Network.objects.get_or_create(name=network)
+                                    game.networks.add(network)
+                                    game.save()
         return counter
+
+
+
+
+    # def ncaa():
+    #     CSV_DATA = NCAA_FILE
+    #     counter = 0
+    #     # create a sport if it doesn't exist
+    #     sport, created = Sport.objects.get_or_create(name='basketball')
+    #     # create a league if it doesn't exist
+    #     league, created = League.objects.get_or_create(name='NCAA', sport=sport)
+
+    #     # open csv file
+    #     with open(CSV_DATA, 'r') as csv_file:
+    #         # skip first line
+    #         next(csv_file)
+    #         # read csv file
+    #         csv_reader = csv.reader(csv_file, delimiter=',')
+    #         # loop through each row
+    #         for row in csv_reader:
+    #             # get date and time
+    #             date = row[0]
+    #             time = row[1]
+    #             # handle when time is Noon
+    #             if time == 'Noon':
+    #                 time = '12:00 PM'
+    #             game_time = date + time
+    #             # convert to datetime (format is 202401117:00 PM)
+    #             try:
+    #                 game_date = datetime.datetime.strptime(game_time, '%Y%m%d%I:%M %p')
+    #                 eastern_timezone = pytz.timezone('US/Eastern')
+    #                 game_date = eastern_timezone.localize(game_date)
+    #                 # convert to utc
+    #                 game_date = game_date.astimezone(timezone.utc)
+    #             except ValueError:
+    #                 # skip game if date is not valid
+    #                 print(f'Invalid date: {game_time}')
+    #                 continue
+
+    #             # get home team and away team
+    #             home_team = row[2]
+    #             away_team = row[3]
+    #             # clean up team names (remove spaces before and after)
+    #             home_team = home_team.strip()
+    #             away_team = away_team.strip()
+    #             # get network
+    #             network = row[4]
+    #             # skip if no network
+    #             if len(network) == 0:
+    #                 continue
+    #             # turn network into a list
+    #             networks = network.split(',')
+    #             # create teams
+    #             home_team, created_home = Team.objects.get_or_create(name=home_team, league=league)
+    #             away_team, created_away = Team.objects.get_or_create(name=away_team, league=league)
+    #             # create game
+    #             game, created_game = Game.objects.get_or_create(name=f"{home_team} vs {away_team}", league=league, sport=sport, time=game_date)
+    #             counter += 1
+    #             if created_game:
+    #                 game.teams.add(home_team)
+    #                 game.teams.add(away_team)
+    #                 for network in networks:
+    #                     print(f"{home_team} v {away_team} on {network}")
+    #                     network, created = Network.objects.get_or_create(name=network)
+    #                     game.networks.add(network)
+    #                 game.save()
+    #                 print(counter)
+    #     return counter
                              
     def us_soccer():
         counter = 0
@@ -229,6 +347,7 @@ class Command(BaseCommand):
         for game in json:
             # get date and time
             date = game.get('date')
+            
             # add timezone as UTC
             # if date dose not have a timezone, add UTC
             if date[-1] != 'Z':
@@ -256,6 +375,8 @@ class Command(BaseCommand):
 
             if home_team is None or away_team is None:
                 continue
+            print(home_team)
+            print(away_team)
             # create sport
             sport, created = Sport.objects.get_or_create(name='soccer')
             # create league
