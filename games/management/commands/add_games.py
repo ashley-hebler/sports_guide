@@ -46,6 +46,14 @@ NCAA_MARCH_MADNESS = 'https://www.ncaa.com/news/basketball-women/article/2024-03
 class Command(BaseCommand):
     help = 'Adds games to the database'
 
+    def remove_non_printable(text):
+        bad_chars = ['\xa0']
+        for char in bad_chars:
+            text = text.replace(char, '')
+        return text
+        
+        return cleaned_text
+
     def month_to_num(month):
         return{
             'January' : 1,
@@ -224,9 +232,20 @@ class Command(BaseCommand):
                                     time_am_pm = time_split[1]
                                 else:
                                     time = time_number
-                                    time_am_pm = time_split[1]
+                                    clean_time_split = []
+                                    for time_section in time_split:
+                                        clean_time_split.append(Command.remove_non_printable(time_section))
+                                    if len(clean_time_split) == 2:
+                                        time_number = clean_time_split[0]
+                                        time_am_pm = clean_time_split[1]
+                                    else:
+                                        #find am or pm
+                                        time_am_pm = re.findall(r'[AaPp][Mm]', time)[0]
+                                        # find time
+                                        time_number = re.findall(r'\d+', time)[0]
+                                        time_number = f'{time_number}:00'
 
-                                #%m/%d/%Y %I:%M %p
+                                # #%m/%d/%Y %I:%M %p
                                 date_str = f'{month}/{day}/2024 {time_number} {time_am_pm}'
                                 # convert to utc
                                 game_date = Command.convert_local_time_to_utc(date_str, 'US/Eastern')
