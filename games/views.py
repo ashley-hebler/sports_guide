@@ -49,8 +49,3 @@ def teams(request):
         'teams': teams,
     }
     return HttpResponse(template.render(context, request))
-
-
-from datetime import datetime
-
-from django.http import HttpResponse

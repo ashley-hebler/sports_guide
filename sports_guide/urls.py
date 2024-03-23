@@ -16,15 +16,31 @@ Including another URLconf
 from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
+from rest_framework import permissions
 from django.urls import include, path
 from games.views import leagues, teams
+
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Sports listings",
+        default_version='v1',
+        description="Women's sports",
+    ),
+    public=False,
+    permission_classes=(permissions.AllowAny,)
+)
 
 urlpatterns = [
     path('', include('games.urls')),
     path('leagues/', leagues),
     path('teams/', teams),
     path("admin/", admin.site.urls),
-    path('api/', include('api.urls')), # new
+    path('api/', include('api.urls')),
+    path('docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)

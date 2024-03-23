@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_yasg",
     "django_filters",
     "corsheaders",
 ]
@@ -164,3 +165,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # Replace with your frontend URL
     "https://sheplays.net",  # Replace with your production frontend URL
 ]
+
+
+SWAGGER_SETTINGS = {
+    "USE_SESSION_AUTH": False,
+    "SUPPORTED_SUBMIT_METHODS": ['get'],
+    "SECURITY_DEFINITIONS": None,
+}
