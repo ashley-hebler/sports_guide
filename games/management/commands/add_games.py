@@ -17,6 +17,7 @@ from .utils import str2bool
 
 WNBA_ENDPOINT = 'https://data.wnba.com/data/5s/v2015/json/mobile_teams/wnba/2023/league/10_full_schedule_tbds.json'
 WNBA_ENDPOINT = 'https://data.wnba.com/data/5s/v2015/json/mobile_teams/wnba/2024/league/10_full_schedule.json'
+WNBA_ENDPOINT = 'https://cdn.wnba.com/static/json/staticData/scheduleLeagueV2_1.json'
 # this looked promising too https://cdn.wnba.com/static/json/staticData/scheduleLeagueV2_1.json
 
 NCAA_ENDPOINT = 'https://www.espn.com/womens-college-basketball/schedule/_/date/'
@@ -42,6 +43,25 @@ FIFA_TBA = 'TBD'
 NCAA_FILE = './games/data/ncaa_data/ncaa-espn-conf.csv'
 
 NCAA_MARCH_MADNESS = 'https://www.ncaa.com/news/basketball-women/article/2024-03-17/2024-march-madness-womens-ncaa-tournament-schedule-dates-times'
+
+WNBA_CONF_MAP = {
+    'Eastern Conference': [
+        'Atlanta Dream',
+        'Chicago Sky',
+        'Connecticut Sun',
+        'Indiana Fever',
+        'New York Liberty',
+        'Washington Mystics',
+    ],
+    'Western Conference': [
+        'Dallas Wings',
+        'Las Vegas Aces',
+        'Los Angeles Sparks',
+        'Minnesota Lynx',
+        'Phoenix Mercury',
+        'Seattle Storm',
+    ]
+}
 
 class Command(BaseCommand):
     help = 'Adds games to the database'
@@ -129,62 +149,136 @@ class Command(BaseCommand):
                             counter += 1
         return counter         
 
-    def wnba():
-        counter = 0
-        response = requests.get(WNBA_ENDPOINT)
-        data = response.json()
-        months = data['lscd']
-        for month in months:
-            games = month['mscd']['g']
-            for game in games:
-                home = game['h']
-                home_city = home['tc']
-                home_name = home['tn']
-                visitor = game['v']
-                visitor_city = visitor['tc']
-                visitor_name = visitor['tn']
-                team_home = f'{home_city} {home_name}'
-                team_visitor = f'{visitor_city} {visitor_name}'
+    # def wnba():
+    #     counter = 0
+    #     response = requests.get(WNBA_ENDPOINT)
+    #     data = response.json()
+    #     months = data['lscd']
+    #     for month in months:
+    #         games = month['mscd']['g']
+    #         for game in games:
+    #             home = game['h']
+    #             home_city = home['tc']
+    #             home_name = home['tn']
+    #             visitor = game['v']
+    #             visitor_city = visitor['tc']
+    #             visitor_name = visitor['tn']
+    #             team_home = f'{home_city} {home_name}'
+    #             team_visitor = f'{visitor_city} {visitor_name}'
                 
-                game_day = game['gdtutc']
-                game_time = game['utctm']
-                if game_time == 'TBD' or game_time == 'TBD':
-                    # skip game
-                    continue
-                # format is 2023-05-1300:00
-                game_date = datetime.datetime.strptime(game_day + game_time + ' +0000', '%Y-%m-%d%H:%M %z')
-                # convert to utc
-                game_date = game_date.astimezone(timezone.utc)
+    #             game_day = game['gdtutc']
+    #             game_time = game['utctm']
+    #             if game_time == 'TBD' or game_time == 'TBD':
+    #                 # skip game
+    #                 continue
+    #             # format is 2023-05-1300:00
+    #             game_date = datetime.datetime.strptime(game_day + game_time + ' +0000', '%Y-%m-%d%H:%M %z')
+    #             # convert to utc
+    #             game_date = game_date.astimezone(timezone.utc)
 
-                # create a sport if it doesn't exist
-                sport, created = Sport.objects.get_or_create(name='basketball')
-                # create a league if it doesn't exist
-                league, created = League.objects.get_or_create(name='WNBA', sport=sport)
-                # create a team if it doesn't exist
-                team_home, created_home = Team.objects.get_or_create(name=team_home, league=league)
-                team_visitor, created_visitor = Team.objects.get_or_create(name=team_visitor, league=league)
+    #             # create a sport if it doesn't exist
+    #             sport, created = Sport.objects.get_or_create(name='basketball')
+    #             # create a league if it doesn't exist
+    #             league, created = League.objects.get_or_create(name='WNBA', sport=sport)
+    #             # create a team if it doesn't exist
+    #             team_home, created_home = Team.objects.get_or_create(name=team_home, league=league)
+    #             team_visitor, created_visitor = Team.objects.get_or_create(name=team_visitor, league=league)
 
-                # create network
-                broadcast = game['bd']
+    #             # create network
+    #             broadcast = game['bd']
+    #             networks = []
+    #             if broadcast:
+    #                 network_list = broadcast['b']
+    #                 if network_list:
+    #                     for network in network_list:
+    #                         network_name = network['disp']
+    #                         network, created = Network.objects.get_or_create(name=network_name)
+    #                         networks.append(network)
+    #             # create a game
+    #             game, created_game = Game.objects.get_or_create(name=f"{team_home} vs {team_visitor}", time=game_date, league=league, sport=sport)
+    #             counter += 1
+    #             if created_game:
+    #                 for network in networks:
+    #                     game.networks.add(network)
+    #                 game.teams.add(team_home)
+    #                 game.teams.add(team_visitor)
+    #                 game.save()
+    #     return counter
+        
+    def get_wnba_conf(team_name):
+        for conf, teams in WNBA_CONF_MAP.items():
+            if team_name in teams:
+                return conf
+        return None
+
+    def wnba():
+        url = WNBA_ENDPOINT
+        response = requests.get(url)
+        json = response.json()
+        schedule = json.get('leagueSchedule')
+        game_dates = schedule.get('gameDates')
+        # create sport
+        sport, created = Sport.objects.get_or_create(name='basketball')
+        # create league
+        league, created = League.objects.get_or_create(name='WNBA', sport=sport)
+        counter = 0
+        for game_date in game_dates:
+            games = game_date.get('games')
+            for game in games:
+                date = game.get('gameDateTimeUTC')
+                # date is 2024-05-03T04:00:00Z
+                game_date = datetime.datetime.strptime(date, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+                home_team = game.get('homeTeam')
+                home_city = home_team.get('teamCity')
+                home_name = home_team.get('teamName')
+                home_team_name = f'{home_city} {home_name}'
+                home_conf = Command.get_wnba_conf(home_team_name)
+                away_team = game.get('awayTeam')
+                away_city = away_team.get('teamCity')
+                away_name = away_team.get('teamName')
+                away_team_name = f'{away_city} {away_name}'
+                away_conf = Command.get_wnba_conf(away_team_name)
+
+                # create teams
+                home_team, created_home = Team.objects.get_or_create(name=home_team_name, league=league, conference=home_conf)
+
+                away_team, created_away = Team.objects.get_or_create(name=away_team_name, league=league, conference=away_conf)
+
+                # get networks
+                broadcasters = game.get('broadcasters')
+                # loop through broadcaster keys
                 networks = []
-                if broadcast:
-                    network_list = broadcast['b']
-                    if network_list:
-                        for network in network_list:
-                            network_name = network['disp']
+                for broadcaster in broadcasters.keys():
+                    possible_networks = broadcasters.get(broadcaster)
+                    if len(possible_networks) > 0:
+                        for p_network in possible_networks:
+                            network_name = p_network.get('broadcasterDisplay')
+                            
+                            # create network
                             network, created = Network.objects.get_or_create(name=network_name)
                             networks.append(network)
-                # create a game
-                game, created_game = Game.objects.get_or_create(name=f"{team_home} vs {team_visitor}", time=game_date, league=league, sport=sport)
-                counter += 1
+                
+                # create game
+                game_event = game.get('gameLabel')
+                game, created_game = Game.objects.get_or_create(name=game_event, league=league, sport=sport, time=game_date)
+
+
                 if created_game:
-                    for network in networks:
-                        game.networks.add(network)
-                    game.teams.add(team_home)
-                    game.teams.add(team_visitor)
+                    counter += 1
+                    game.teams.add(home_team)
+                    game.teams.add(away_team)
+                    if len(networks) > 0:
+                        for network in networks:
+                            game.networks.add(network)
                     game.save()
+
         return counter
+                    
+
+                    
         
+
+
     def ncaa():
         counter = 0
         url = NCAA_MARCH_MADNESS
@@ -290,8 +384,6 @@ class Command(BaseCommand):
                                     game.networks.add(network)
                                     game.save()
         return counter
-
-
 
 
     # def ncaa():
