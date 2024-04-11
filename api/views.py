@@ -20,6 +20,7 @@ class GameList(generics.ListCreateAPIView):
         ?current=true
         ?team_includes=team_name
         ?team=team_id
+        ?network=network_id
         """
         queryset = Game.objects.all().order_by('time')
         start_time = self.request.query_params.get('start_time')
@@ -27,6 +28,7 @@ class GameList(generics.ListCreateAPIView):
         current = self.request.query_params.get('current')
         team_includes = self.request.query_params.get('team_includes')
         team = self.request.query_params.get('team')
+        network = self.request.query_params.get('network')
         if start_time and end_time:
             queryset = queryset.filter(time__range=[start_time, end_time])
         if start_time and not end_time:
@@ -39,6 +41,8 @@ class GameList(generics.ListCreateAPIView):
             queryset = queryset.filter(teams__name__icontains=team_includes)
         if team:
             queryset = queryset.filter(teams__id=team)
+        if network:
+            queryset = queryset.filter(networks__id=network)
         return queryset
 
 class GamesToday(generics.ListCreateAPIView):
