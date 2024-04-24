@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
-from games.models import Game, Team, League, Sport, Network
+from games.models import Game, Team, League, Sport, Network, WatchLink
 from .utils import str2bool
 
 
@@ -129,9 +129,16 @@ class Command(BaseCommand):
                     opponent, created = Team.objects.get_or_create(name=opponent_name, league=league)
                     # create network
                     network_name = None
+                    watch_link = None
                     if stream:
                         network_name = stream.get('title')
                         network, created = Network.objects.get_or_create(name=network_name)
+                        # create watch link
+                        url = stream.get('url')
+                        if url:
+                            watch_link, created = WatchLink.objects.get_or_create(label=network_name, url=url)
+
+
                     # create game
                     date = event.get('date')
                     if date:
@@ -145,6 +152,8 @@ class Command(BaseCommand):
                             game.teams.add(home_team)
                             game.teams.add(opponent)
                             game.networks.add(network)
+                            if watch_link:
+                                game.watch_links.add(watch_link)
                             game.save()
                             counter += 1
         return counter         
@@ -248,15 +257,22 @@ class Command(BaseCommand):
                 broadcasters = game.get('broadcasters')
                 # loop through broadcaster keys
                 networks = []
+                watch_links = []
                 for broadcaster in broadcasters.keys():
                     possible_networks = broadcasters.get(broadcaster)
                     if len(possible_networks) > 0:
                         for p_network in possible_networks:
-                            network_name = p_network.get('broadcasterDisplay')
+                            network_name = p_network.get('broadcasterAbbreviation')
                             
                             # create network
                             network, created = Network.objects.get_or_create(name=network_name)
                             networks.append(network)
+
+                            #create watch link
+                            url = p_network.get('broadcasterVideoLink')
+                            if url:
+                                watch_link, created = WatchLink.objects.get_or_create(label=network_name, url=url)
+                                watch_links.append(watch_link)
                 
                 # create game
                 game_event = game.get('gameLabel')
@@ -270,6 +286,9 @@ class Command(BaseCommand):
                     if len(networks) > 0:
                         for network in networks:
                             game.networks.add(network)
+                    if len(watch_links) > 0:
+                        for watch_link in watch_links:
+                            game.watch_links.add(watch_link)
                     game.save()
 
         return counter
@@ -470,10 +489,16 @@ class Command(BaseCommand):
             # get network
             networks = game.get('broadcastLinks', [])
             network_list = []
+            watch_links = []
             for network in networks:
-                network = network.get('imageAltText')
-                if network:
-                    network_list.append(network)
+                network_name = network.get('imageAltText')
+                if network_name:
+                    network_list.append(network_name)
+                    # create watch link
+                    url = network.get('broadcastURLWeb')
+                    if url:
+                        watch_link, created = WatchLink.objects.get_or_create(label=network_name, url=url)
+                        watch_links.append(watch_link)
             # teams
             teams = game.get('contestants', [])
             home_team = None
@@ -504,6 +529,8 @@ class Command(BaseCommand):
                 for network in network_list:
                     network, created = Network.objects.get_or_create(name=network)
                     game.networks.add(network)
+                for watch_link in watch_links:
+                    game.watch_links.add(watch_link)
                 game.save()
         return counter
 

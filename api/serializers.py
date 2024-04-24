@@ -10,7 +10,7 @@ class GameSerializer(serializers.ModelSerializer):
         model = Game
         # display nested fields
         depth = 1
-        fields = ['id', 'time', 'time_formatted', 'date_formatted', 'name', 'league', 'sport', 'teams', 'networks']
+        fields = ['id', 'time', 'time_formatted', 'date_formatted', 'name', 'league', 'sport', 'teams', 'networks', 'event', 'watch_links']
     
     def get_time_formatted(self, obj):
         #hour:minute am/pm no leading zeros

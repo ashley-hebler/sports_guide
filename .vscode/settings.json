@@ -5,6 +5,7 @@
         "us-soccer",
         "deps",
         "pwhl",
-        "wnba"
+        "wnba",
+        "db"
     ]
 }

@@ -12,6 +12,7 @@ class Game(models.Model):
     teams = models.ManyToManyField('Team')
     networks = models.ManyToManyField('Network')
     event = models.CharField(max_length=200, null=True)
+    watch_links = models.ManyToManyField('WatchLink')
 
 
     def __str__(self):
@@ -55,3 +56,10 @@ class Network(models.Model):
 
     def __str__(self):
         return self.name
+
+class WatchLink(models.Model):
+    label = models.CharField(max_length=200)
+    url = models.CharField(max_length=400)
+
+    def __str__(self):
+        return self.url
