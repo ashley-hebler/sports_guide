@@ -5,14 +5,12 @@ from django.template import loader
 from .models import Game, League, Team
 
 def index(request):
-    # games today
-    games_today = Game.objects.filter(time__date=date.today()).order_by('time')
-    games_this_week = Game.objects.filter(time__date__range=[date.today(), date.today() + timedelta(days=7)]).order_by('time')
+    # all game sorted by time and starting with today
+    today = date.today()
+    games = Game.objects.filter(time__gte=today).order_by('time')[:300]
     template = loader.get_template('games/index.html')
-    # surface networks
     context = {
-        'games_today': games_today,
-        'games_this_week': games_this_week,
+        'games': games,
     }
     return HttpResponse(template.render(context, request))
 

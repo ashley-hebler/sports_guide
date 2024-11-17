@@ -3,46 +3,37 @@
 {% block title %}Games{% endblock %}
 
 {% block content %}
-    <h1 class="text-3xl mb-8">Games</h1>
-    <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-        <section class="bg-slate-50 max-w-md p-5 rounded-lg drop-shadow-md border-4 border-indigo-600">
-            {% if games_today %}
-                <h2 class="text-xl bg-indigo-500 p-2 text-white inline-block mb-6 rounded-lg">Today</h2>
-                <ul>
-                {% for game in games_today %}
-                    <li class="mb-4 pb-4 border-b-4 border-indigo-500">
-                        <p><strong>{% if game.sport.name == 'basketball'%}🏀{%else%}⚽️{%endif%} {{ game.name }}</strong></p>
-                        <p><em>{{game.time}}</em></p>
-                        {% if game.networks %}
-                            <p>📺 {{ game.networks.all|join:", " }}</p>
-                        {% endif %}
-                        
-                    </li>
+<style>td,th {text-align:left; padding: 2px; font-family: sans-serif;}</style>
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Time</th>
+            <th>League</th>
+            <th>Sport</th>
+            <th>Watch</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for game in games %}
+        <tr>
+            <td>{{ game.name }}</td>
+            <td>{{ game.time }}</td>
+            <td>{{ game.league }}</td>
+            <td>{{ game.sport }}</td>
+            <td>
+                {% for link in game.watch_links.all %}
+                <p><a href="{{ link.url }}" target="_blank">{{ link.label }}</a></p>
                 {% endfor %}
-                </ul>
-            {% else %}
-            <h2 class="text-xl bg-indigo-500 p-2 text-white inline-block mb-6 rounded-lg">No games today</h2>
-            {% endif %}
-        </section>
-        <section class="bg-slate-50 max-w-md p-5 rounded-lg drop-shadow-md border-4 border-cyan-600">
-            {% if games_this_week %}
-                <h2 class="text-xl bg-cyan-500 p-2 text-white inline-block mb-6 rounded-lg">This week</h2>
-                <ul>
-                {% for game in games_this_week %}
-                    <li class="mb-4 pb-4 border-b-4 border-cyan-500">
-                        <p><strong>{% if game.sport.name == 'basketball'%}🏀{%else%}⚽️{%endif%} {{ game.name }}</strong></p>
-                        <p><em>{{game.time}}</em></p>
-                        {% if game.networks %}
-                            <p>📺 {{ game.networks.all|join:", " }}</p>
-                        {% endif %}
-                        
-                    </li>
+                {% if game.watch_links.count == 0 %}
+                {% for network in game.networks.all %}
+                <p>{{ network }}</p>
                 {% endfor %}
-                </ul>
-            {% else %}
-            <h2 class="text-xl bg-cyan-500 p-2 text-white inline-block mb-6 rounded-lg">No games today</h2>
-            {% endif %}
-        </section>
-    </div>
-</div>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
 {% endblock %}

@@ -9,12 +9,12 @@ from bs4 import BeautifulSoup
 from .utils import str2bool
 
 
-NCAA_ENDPOINT = 'https://www.espn.com/womens-college-basketball/schedule/_/date/'
+NCAA_ENDPOINT = 'https://www.espn.com/watch/schedule/_/type/upcoming/categoryId/be9385dc-c518-3a55-9197-ec47a9e0e7f6/startDate/'
 
 
 class Command(BaseCommand):
     def espn(dry_run=False):
-        file_dir = './games/data/ncaa/'
+        file_dir = './games/data/ncaa_volleyball/'
         counter = 0
         
         # date format is YYYYMMDD

@@ -6,3 +6,5 @@ notes.txt
 .DS_Store
 games/data/ncaa/*
 games/data/ncaa_data/*
+games/data/ncaa_volleyball/*
+*.csv

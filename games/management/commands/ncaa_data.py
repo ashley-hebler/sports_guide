@@ -252,7 +252,86 @@ class Command(BaseCommand):
                 writer.writerow(row)
             print(f'All data has been saved to {final_file}')
     
+    def scrape_html(self):
+        counter = 0
+        all_games = []
+
+        # get the files names in NCAA_FILE_DIR and strip the .html
+        dates = [f[:-5] for f in os.listdir(NCAA_FILE_DIR) if os.path.isfile(os.path.join(NCAA_FILE_DIR, f))]
+        
+        for date in dates:
+            # if file doesn't look like a date, skip
+            if len(date) != 8:
+                continue
+            # get html
+            html = Command.get_ncaa_html(date)
+            # get games
+            rows = html.find_all("tr", class_="Table__TR")
+            for row in rows:
+                # time .date__col Table__TD
+                time = row.find("td", class_="date__col")
+                # time is in cenral time, make it UTC
+                if not time:
+                    continue
+                time = time.get_text()
+                # away team Table__Team away
+                away_team = row.find("span", class_="away")
+                if not away_team:
+                    continue
+                away_team = away_team.get_text()
+                # home team Table__Team home
+                home_team_selector = row.select_one(".local")
+                home_team = home_team_selector.find("span", class_="Table__Team")
+                if not home_team:
+                    continue
+                home_team = home_team.get_text()
+                
+                # strip rank
+                home_team = Command.strip_rank(home_team)
+                away_team = Command.strip_rank(away_team)
+
+                # network network-container
+                network = row.find("div", class_="network-container")
+                if not network:
+                    continue
+                has_link = network.find("a", class_="AnchorLink")
+                network_link = None
+                network_name = None
+                if has_link:
+                    # name is in alt of image
+                    network_image = network.find("img")
+                    if not network_image:
+                        continue
+                    network_name = network_image['alt']
+                    network_link = has_link['href']
+                    # if link is relative, make it absolute
+                    if network_link.startswith('/'):
+                        network_link = 'https://www.espn.com' + network_link
+                else:
+                    # find all network-name class
+                    network_name = network.find_all("div", class_="network-name")
+                    networs_list = []
+                    for network in network_name:
+                        network_text = network.get_text()
+                        networs_list.append(network_text)
+                    network_name = '|'.join(networs_list)
+                    
+                
+                all_games.append([date, time, home_team, away_team, network_name, network_link])
+                counter += 1
+        # write to csv
+        with open(NCAA_FINAL, mode='w') as file:
+            writer = csv.writer(file)
+            writer.writerow(['date', 'time', 'home_team', 'away_team', 'network', 'network_link'])
+            for game in all_games:
+                writer.writerow(game)
+
+                
+                    
+        
+
     def handle(self, *args, **options):
-        Command.step_1(self)
-        Command.step_2(self)
-        Command.step_3(self)
+        # Command.step_1(self)
+        # Command.step_2(self)
+        # Command.step_3(self)
+        Command.scrape_html(self)

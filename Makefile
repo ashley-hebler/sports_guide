@@ -25,14 +25,27 @@ us_soccer:
 au:
 	python manage.py add_games --fresh_data False --league au
 
+au_scrape:
+	python manage.py au_scrape
+
 ncaa_scrape:
 	python manage.py ncaa_scrape --dry_run False
+
+ncaa_vball_scrape:
+	python manage.py ncaa_volleyball_scrape --dry_run False
+
 
 ncaa_data:
 	python manage.py ncaa_data
 
+ncaa_vball_data:
+	python manage.py ncaa_volleyball_data
+
 ncaa:
 	python manage.py add_games --fresh_data False --league ncaa
+
+ncaa_vball:
+	python manage.py add_games --fresh_data False --league ncaa_vball
 
 clean:
 	python manage.py clean_games --all_games False 
@@ -71,4 +84,7 @@ scrape_au:
 	scrapy runspider ./games/management/commands/au_scrape.py -o ./games/data/au_softball.json
 
 rank:
-	python manage.py rank_teams
+	python manage.py 
+	
+recover_nwsl:
+	python manage.py recover_nwsl
