@@ -22,7 +22,9 @@ WNBA_ENDPOINT = 'https://cdn.wnba.com/static/json/staticData/scheduleLeagueV2_1.
 
 NCAA_ENDPOINT = 'https://www.espn.com/womens-college-basketball/schedule/_/date/'
 
-PWHL_ENDPOINT = 'https://www.thepwhl.com/en/where-to-watch'
+PWHL_ENDPOINT = 'https://www.thepwhl.com/en/stats/schedule/all-teams/5/all-months'
+PWHL_HTML_FILE = './games/data/pwhl.html'
+PWHL_YOUTUBE = 'https://www.youtube.com/@thepwhlofficial/streams'
 
 NWSL_ENDPOINT = 'https://nwsl-api-prd-sdp.akamaized.net/v1/nwsl/football/seasons/nwsl::Football_Season::fe17bea0b7234cf7957c7249cb828270/matches?locale=en-US&startDate=2024-01-31&endDate=2024-12-31'
 
@@ -88,7 +90,19 @@ class Command(BaseCommand):
             'September' : 9, 
             'October' : 10,
             'November' : 11,
-            'December' : 12
+            'December' : 12,
+            'Jan' : 1,
+            'Feb' : 2,
+            'Mar' : 3,
+            'Apr' : 4,
+            'May' : 5,
+            'Jun' : 6,
+            'Jul' : 7,
+            'Aug' : 8,
+            'Sep' : 9,
+            'Oct' : 10,
+            'Nov' : 11,
+            'Dec' : 12,
         }[month]
 
     def convert_local_time_to_utc(local_time_str, city):
@@ -626,18 +640,22 @@ class Command(BaseCommand):
         # https://gist.github.com/heyalexej/8bf688fd67d7199be4a1682b3eec7568
 
         cities = {
-            'Toronto': 'America/Toronto',
-            'Boston': 'America/New_York',
-            'Minnesota': 'America/Chicago',
-            'Ottawa': 'America/Toronto',
-            'Montreal': 'America/Montreal',
-            'New York': 'America/New_York',
+            'EST': 'America/New_York',
+            'CST': 'America/Chicago',
+            'MST': 'America/Denver',
+            'PST': 'America/Los_Angeles',
+            'EDT': 'America/New_York',
+            'CDT': 'America/Chicago',
+            'MDT': 'America/Denver',
+            'PDT': 'America/Los_Angeles',
         }
         counter = 0
         # set user agent to get around 403 error
         headers = {'User-Agent': 'Mozilla/5.0'}
-        page = requests.get(PWHL_ENDPOINT, headers=headers)
-        soup = BeautifulSoup(page.content, "html.parser")
+        # page = requests.get(PWHL_ENDPOINT, headers=headers)
+        with open(PWHL_HTML_FILE, 'r') as file:
+            page = file.read()
+        soup = BeautifulSoup(page, 'html.parser')
         schedule_table = soup.find('table')
         if schedule_table:
             print('Found table')
@@ -652,19 +670,46 @@ class Command(BaseCommand):
                 date = cells[0].text.strip()
                 # get time
                 time = cells[1].text.strip()
-                # get home team
-                home_team = cells[2].text.strip()
-                # get away team
-                away_team = cells[3].text.strip()
-                print(f"{date} {time} {home_team} vs {away_team}")
-                # add new cities to cities
-                if cities.get(home_team) is None:
+                # if first char in time isn't a number, skip
+                if not time[0].isdigit():
                     continue
-                utc_time = Command.convert_local_time_to_utc(f'{date} {time}', cities.get(home_team))
-                # network
-                network = 'YouTube'
+                # example Sun, Dec 8 4:00 pm EST
+                # get timezone (last three characters)
+                timezone = time[-3:]
+                if timezone not in cities:
+                    continue
+                time_hour = time.split(':')[0]
+                time_minute = time.split(':')[1].split(' ')[0]
+                time_am_pm = time.split(' ')[1]
+                time_am_pm = time_am_pm.upper()
+                full_time = f'{time_hour}:{time_minute} {time_am_pm}'
+
+                # turn date into datetime
+                # format is Wed, Jan 22
+                date = date.split(',')[1].strip()
+                date = date.split(' ')
+                month = date[0]
+                day = date[1]
+                # if after january, year is 2025
+                year = 2025
+                if month == 'Dec':
+                    year = 2024
+
+                #lets make a date
+                month_num = Command.month_to_num(month)
+                date_str = f'{month_num}/{day}/{year} {full_time}'
+                print(date_str)
+                
+                utc_time = Command.convert_local_time_to_utc(date_str, cities.get(timezone))
+                print(utc_time)
+                # # get home team
+                home_team = cells[5].text.strip()
+                # # get away team
+                away_team = cells[3].text.strip()
                 sport = 'hockey'
                 league = 'PWHL'
+                network = 'Youtube'
+                watch_link_url = PWHL_YOUTUBE
                 # create sport
                 sport, created = Sport.objects.get_or_create(name=sport)
                 # create league
@@ -678,14 +723,18 @@ class Command(BaseCommand):
                     # add teams to game
                     game.teams.add(home_team)
                     game.teams.add(away_team)
-                    # add network to game
+                    # create network
                     network, created = Network.objects.get_or_create(name=network)
                     game.networks.add(network)
+                    # create watch link
+                    watch_link, created = WatchLink.objects.get_or_create(label=network, url=watch_link_url)
+                    game.watch_links.add(watch_link)
                     game.save()
                     counter += 1
+
                 except Exception as e:
                     print(f'Error creating game: {e}')
-                    continues
+                    continue
 
         return counter        
 
