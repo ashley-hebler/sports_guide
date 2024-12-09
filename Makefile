@@ -84,7 +84,7 @@ scrape_au:
 	scrapy runspider ./games/management/commands/au_scrape.py -o ./games/data/au_softball.json
 
 rank:
-	python manage.py 
+	python manage.py rank_teams
 	
 recover_nwsl:
 	python manage.py recover_nwsl
