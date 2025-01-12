@@ -7,6 +7,10 @@ from rest_framework import generics, viewsets
 from games.models import Game, Sport, Team
 from .serializers import GameSerializer, SportsSerializer, TeamSerializer
 
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from rest_framework.exceptions import ValidationError
+
 class GameList(generics.ListCreateAPIView):
     serializer_class = GameSerializer
     filter_backends = [DjangoFilterBackend]
@@ -89,3 +93,18 @@ class TeamsList(generics.ListCreateAPIView):
             queryset = queryset.order_by('name')
         return queryset
     
+@method_decorator(cache_page(60 * 60), name='dispatch')  # Cache for 1 hour
+class GamesBySport(generics.ListAPIView):
+    serializer_class = GameSerializer
+
+    def get_queryset(self):
+        sport_name = self.kwargs.get('sport')
+        
+        # Validate sport exists
+        sport_obj = Sport.objects.filter(name__iexact=sport_name).first()
+        if not sport_obj:
+            raise ValidationError({'error': f'Sport "{sport_name}" not found.'})
+
+        # Use prefetch_related to optimize database queries
+        # dont show games more than 24 hours old
+        return Game.objects.filter(sport=sport_obj, time__gte=datetime.datetime.now() - datetime.timedelta(days=1)).order_by('time').prefetch_related('teams', 'networks', 'watch_links')

@@ -47,6 +47,9 @@ ncaa:
 ncaa_vball:
 	python manage.py add_games --fresh_data False --league ncaa_vball
 
+unrivaled:
+	python manage.py add_games --fresh_data False --league unrivaled
+
 clean:
 	python manage.py clean_games --all_games False 
 
@@ -76,6 +79,9 @@ clean_pwhl:
 
 clean_us_soccer:
 	python manage.py clean_games --all_games True --league "US Soccer"
+
+clean_unrivaled:
+	python manage.py clean_games --all_games True --league "Unrivaled"
 
 dep:
 	python -m pip freeze > requirements.txt

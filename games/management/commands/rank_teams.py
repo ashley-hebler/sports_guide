@@ -129,6 +129,6 @@ class Command(BaseCommand):
            
     
     def handle(self, *args, **options):
-        self.rank_vb()
+        self.rank_wbb()
 
 

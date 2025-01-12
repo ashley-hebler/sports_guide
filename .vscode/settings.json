@@ -6,6 +6,7 @@
         "deps",
         "pwhl",
         "wnba",
-        "db"
+        "db",
+        "unrivaled"
     ]
 }

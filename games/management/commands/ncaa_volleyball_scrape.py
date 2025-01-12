@@ -18,7 +18,7 @@ class Command(BaseCommand):
         counter = 0
         
         # date format is YYYYMMDD
-        season_start = datetime.date(2024, 11, 16)
+        season_start = datetime.date(2024, 12, 13)
         #convert to string
         season_start_str = season_start.strftime('%Y%m%d')
         

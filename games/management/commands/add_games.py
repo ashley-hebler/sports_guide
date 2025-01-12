@@ -66,6 +66,8 @@ WNBA_CONF_MAP = {
     ]
 }
 
+UNRIVALED_CSV = './games/data/unrivaled.csv'
+
 class Command(BaseCommand):
     help = 'Adds games to the database'
 
@@ -888,8 +890,73 @@ class Command(BaseCommand):
                         game.save()
         return counter
 
-                
-
+    def unrivaled():
+        file = UNRIVALED_CSV
+        counter = 0
+        # create sport
+        sport, created = Sport.objects.get_or_create(name='basketball')
+        # create league
+        league, created = League.objects.get_or_create(name='Unrivaled', sport=sport)
+        with open(file, 'r') as csv_file:
+            # skip first line
+            next(csv_file)
+            # read csv file
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            # loop through each row
+            for row in csv_reader:
+                # get date and time
+                date = row[0]
+                time = row[1]
+                # convert to datetime (format is 2024-01-01 7:00 PM)
+                try:
+                    game_date = datetime.datetime.strptime(date + " " + time, '%Y-%m-%d %I:%M %p')
+                    eastern_timezone = pytz.timezone('US/Eastern')
+                    game_date = eastern_timezone.localize(game_date)
+                    # convert to utc
+                    game_date = game_date.astimezone(timezone.utc)
+                    #skip old games (before today)
+                    if game_date < timezone.now():
+                        continue
+                except ValueError:
+                    # skip game if date is not valid
+                    print(f'Invalid date: {game_date}')
+                    continue
+                # get home team and away team
+                home_team = row[4]
+                away_team = row[5]
+                # clean up team names (remove spaces before and after)
+                home_team = home_team.strip()
+                away_team = away_team.strip()
+                # if home_team or away_team is TBD, skip
+                if home_team == 'TBD' or away_team == 'TBD':
+                    continue
+                # get network
+                network_list = ['Max']
+                network_data = row[2]
+                if network_data:
+                    network_list.append(network_data)
+                # set watch links too (same as network)
+                watch_links = []
+                for network in network_list:
+                    watch_link, created = WatchLink.objects.get_or_create(label=network, url='https://www.unrivaled.basketball/')
+                    watch_links.append(watch_link)
+                # create game
+                game, created_game = Game.objects.get_or_create(name=f"{home_team} vs {away_team}", league=league, sport=sport, time=game_date)
+                counter += 1
+                if created_game:
+                    # create teams
+                    home_team, created_home = Team.objects.get_or_create(name=home_team, league=league)
+                    away_team, created_away = Team.objects.get_or_create(name=away_team, league=league)
+                    game.teams.add(home_team)
+                    game.teams.add(away_team)
+                    for network in network_list:
+                        network, created = Network.objects.get_or_create(name=network)
+                        game.networks.add(network)
+                    for watch_link in watch_links:
+                        game.watch_links.add(watch_link)
+                    game.save()
+        return counter
+        
     def add_arguments(self, parser):
         parser.add_argument('--fresh_data', type=str, help='Delete all games, teams, leagues, networks, and sports before adding new data', default='False')
         parser.add_argument('--league', type=str, help='Add only league passed', default='')
@@ -916,6 +983,7 @@ class Command(BaseCommand):
             'fifa': ('FIFA', 'Successfully added {} FIFA games'),
             'au': ('AU', 'Successfully added {} softball games'),
             'us_soccer': ('us_soccer', 'Successfully added {} US Soccer games'),
+            'unrivaled': ('unrivaled', 'Successfully added {} Unrivaled games')
         }
 
         league_name = options['league']
