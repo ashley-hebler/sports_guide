@@ -301,9 +301,13 @@ class Command(BaseCommand):
                                 watch_links.append(watch_link)
                 
                 # create game
-                game_event = game.get('gameLabel')
+                label = game.get('gameLabel')
+                if label:
+                    game_event = f"{home_team_name} vs {away_team_name} - {label}"
+                else:
+                    game_event = f"{home_team_name} vs {away_team_name}"
                 game, created_game = Game.objects.get_or_create(name=game_event, league=league, sport=sport, time=game_date)
-
+                print(f"{home_team_name} vs {away_team_name} on {game_date} on {networks}")
 
                 if created_game:
                     counter += 1
