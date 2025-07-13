@@ -1,6 +1,9 @@
 start:
 	python manage.py runserver
 
+dev:
+	devbox shell
+
 user:
 	python manage.py createsuperuser
 
@@ -94,3 +97,10 @@ rank:
 	
 recover_nwsl:
 	python manage.py recover_nwsl
+
+
+env-local:
+	cp .env.local .env
+
+env-prod:
+	cp .env.prod .env

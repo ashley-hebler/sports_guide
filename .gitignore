@@ -1,6 +1,6 @@
 __pycache__
 .mypy_cache/
-.env
+.env*
 env
 notes.txt
 .DS_Store
