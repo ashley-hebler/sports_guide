@@ -86,6 +86,12 @@ clean_us_soccer:
 clean_unrivaled:
 	python manage.py clean_games --all_games True --league "Unrivaled"
 
+rugby:
+	python manage.py add_games --fresh_data False --league rugby
+
+clean_rugby:
+	python manage.py clean_games --all_games True --league rugby
+
 dep:
 	python -m pip freeze > requirements.txt
 
@@ -104,3 +110,6 @@ env-local:
 
 env-prod:
 	cp .env.prod .env
+
+scrape_rugby_wc:
+	python manage.py scrape_rugby_wc

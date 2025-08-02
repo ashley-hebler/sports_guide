@@ -961,6 +961,61 @@ class Command(BaseCommand):
                     game.save()
         return counter
         
+    def rugby():
+        import csv
+        import datetime
+        from django.utils import timezone
+        CSV_FILE = "games/data/rugby.csv"
+        sport, _ = Sport.objects.get_or_create(name='rugby')
+        league, _ = League.objects.get_or_create(name='World Rugby', sport=sport)
+        counter = 0
+        with open(CSV_FILE, newline='') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if not row or not row.get("Date"):
+                    continue
+                home_team_name = row["Team1"].strip()
+                away_team_name = row["Team2"].strip()
+                print(home_team_name, away_team_name)
+                home_team, _ = Team.objects.get_or_create(name=home_team_name, league=league)
+                away_team, _ = Team.objects.get_or_create(name=away_team_name, league=league)
+                # Parse date and time
+                date_str = row["Date"].strip()
+                time_str = row["Time_UTC"].strip()
+                if date_str == "TBD" or not date_str:
+                    continue  # skip games with no date
+                if time_str and time_str != "TBD":
+                    try:
+                        game_time = datetime.datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+                        game_time = timezone.make_aware(game_time, timezone.utc)
+                    except Exception:
+                        game_time = timezone.make_aware(datetime.datetime.strptime(date_str, "%Y-%m-%d"), timezone.utc)
+                else:
+                    game_time = timezone.make_aware(datetime.datetime.strptime(date_str, "%Y-%m-%d"), timezone.utc)
+                venue = row["Venue"].strip()
+                city = row["City"].strip()
+                stage = row["Stage"].strip()
+                pool = row["Pool"].strip()
+                # Compose event/notes
+                event = stage
+                notes = f"Pool: {pool}" if pool else ""
+                game_name = f"{home_team_name} vs {away_team_name}"
+                game, created = Game.objects.get_or_create(
+                    name=game_name,
+                    league=league,
+                    sport=sport,
+                    time=game_time,
+                    event=event
+                )
+                if created:
+                    game.teams.add(home_team, away_team)
+                    # Optionally store venue/city in notes or another field if your model supports it
+                    if notes:
+                        game.event = f"{event} ({notes})" if event else notes
+                    game.save()
+                    counter += 1
+        return counter
+
     def add_arguments(self, parser):
         parser.add_argument('--fresh_data', type=str, help='Delete all games, teams, leagues, networks, and sports before adding new data', default='False')
         parser.add_argument('--league', type=str, help='Add only league passed', default='')
@@ -987,7 +1042,8 @@ class Command(BaseCommand):
             'fifa': ('FIFA', 'Successfully added {} FIFA games'),
             'au': ('AU', 'Successfully added {} softball games'),
             'us_soccer': ('us_soccer', 'Successfully added {} US Soccer games'),
-            'unrivaled': ('unrivaled', 'Successfully added {} Unrivaled games')
+            'unrivaled': ('unrivaled', 'Successfully added {} Unrivaled games'),
+            'rugby': ('rugby', 'Successfully added {} rugby games')
         }
 
         league_name = options['league']
