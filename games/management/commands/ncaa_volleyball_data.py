@@ -34,6 +34,9 @@ class Command(BaseCommand):
         counter = 0
         all_games = []
 
+        # ensure output directory exists
+        os.makedirs(NCAA_DATA_DIR, exist_ok=True)
+
         # get the files names in NCAA_FILE_DIR and strip the .html
         dates = [f[:-5] for f in os.listdir(NCAA_FILE_DIR) if os.path.isfile(os.path.join(NCAA_FILE_DIR, f))]
         
